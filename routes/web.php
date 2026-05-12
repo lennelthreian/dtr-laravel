@@ -27,6 +27,8 @@ Route::middleware('auth')->group(function () {
         ->name('dtr.index');
     Route::get('/dtr/show', [App\Http\Controllers\DtrController::class, 'show'])
         ->name('dtr.show');
+    Route::get('/dtr/print-all', [App\Http\Controllers\DtrController::class, 'printAll'])
+        ->name('dtr.print-all');
 
     Route::get('/dtr/edit-request', function () {
         return redirect()->route('dtr.index');

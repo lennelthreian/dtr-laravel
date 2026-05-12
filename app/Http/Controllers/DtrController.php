@@ -441,6 +441,126 @@ class DtrController extends Controller
         ));
     }
 
+    public function printAll(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->is_super) {
+            abort(403);
+        }
+
+        $request->validate([
+            'month' => 'required|integer|between:1,12',
+            'year' => 'required|integer|between:2000,2100',
+        ]);
+        $month = (int) $request->month;
+        $year = (int) $request->year;
+
+        $employees = DtrUser::where('is_active', true)
+            ->orderBy('office')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $settings = DtrSetting::getSettings();
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+        $allDtrs = [];
+        foreach ($employees as $employee) {
+            $dtrData = $this->computeDtr($employee->emp_code, $year, $month, $settings);
+
+            $approvedEdits = DtrEditRequest::with('employee')
+                ->forEmployee($employee->emp_code)
+                ->forPeriod($year, $month)
+                ->approved()
+                ->get();
+
+            foreach ($approvedEdits as $edit) {
+                $dayNum = (int) $edit->target_date->format('j');
+                if (!isset($dtrData[$dayNum])) {
+                    $dtrData[$dayNum] = [
+                        'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
+                        'total_hours' => '', 'remarks' => '', 'has_punch' => false,
+                    ];
+                }
+                $dtrData[$dayNum]['is_edited'] = true;
+
+                switch ($edit->type) {
+                    case 'time_correction':
+                        $dtrData[$dayNum][$edit->field] = $edit->new_value;
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'absent':
+                        $dtrData[$dayNum]['am_in'] = '';
+                        $dtrData[$dayNum]['am_out'] = '';
+                        $dtrData[$dayNum]['pm_in'] = '';
+                        $dtrData[$dayNum]['pm_out'] = '';
+                        $dtrData[$dayNum]['total_hours'] = '';
+                        $dtrData[$dayNum]['remarks'] = 'Absent';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'halfday_am':
+                        $dtrData[$dayNum]['am_in'] = '';
+                        $dtrData[$dayNum]['am_out'] = '';
+                        if ($edit->field === 'am_out' && $edit->new_value) {
+                            $dtrData[$dayNum]['am_out'] = $edit->new_value;
+                        }
+                        $dtrData[$dayNum]['remarks'] = 'Halfday (AM)';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'halfday_pm':
+                        $dtrData[$dayNum]['pm_in'] = '';
+                        $dtrData[$dayNum]['pm_out'] = '';
+                        if ($edit->field === 'pm_in' && $edit->new_value) {
+                            $dtrData[$dayNum]['pm_in'] = $edit->new_value;
+                        }
+                        $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'holiday':
+                        $dtrData[$dayNum]['remarks'] = 'Holiday';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['is_holiday'] = true;
+                        break;
+                    case 'wfh':
+                        $dtrData[$dayNum]['remarks'] = 'WFH';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['is_wfh'] = true;
+                        break;
+                    case 'special_order':
+                        $dtrData[$dayNum]['remarks'] = 'Special Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['so_number'] = $edit->new_value;
+                        break;
+                    case 'travel_order':
+                        $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['to_number'] = $edit->new_value;
+                        break;
+                }
+            }
+
+            foreach ($approvedEdits as $edit) {
+                if (!in_array($edit->type, ['time_correction', 'halfday_am', 'halfday_pm'])) continue;
+                $dayNum = (int) $edit->target_date->format('j');
+                $day = $dtrData[$dayNum];
+                if ($edit->type === 'time_correction') {
+                    $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
+                    $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                } else {
+                    $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
+                }
+            }
+
+            $allDtrs[] = [
+                'employee' => $employee,
+                'dtrData' => $dtrData,
+            ];
+        }
+
+        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings'));
+    }
+
     private function recalcHours($day, $settings)
     {
         $amIn = $day['am_in'] ?? '';

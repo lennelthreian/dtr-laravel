@@ -54,6 +54,9 @@
                 </div>
                 @if ($dtrData)
                     <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>
+                    @if (auth()->user()->is_super && $month && $year)
+                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year]) }}" class="btn btn-accent btn-sm">Print All DTRs</a>
+                    @endif
                 @endif
                 @php $unread = auth()->user()->unreadNotifications; @endphp
                 <div class="notif-pos">
