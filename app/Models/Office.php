@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Office extends Model
 {
-    protected $fillable = ['name', 'supervisor_id', 'senior_manager_id'];
+    protected $fillable = ['name', 'supervisor_id', 'senior_manager_id', 'oic_id'];
 
     public function sections()
     {
@@ -26,5 +26,10 @@ class Office extends Model
     public function seniorManager()
     {
         return $this->belongsTo(DtrUser::class, 'senior_manager_id');
+    }
+
+    public function oic()
+    {
+        return $this->belongsTo(DtrUser::class, 'oic_id');
     }
 }

@@ -58,6 +58,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('offices.assign-supervisor');
     Route::post('/offices/{office}/assign-senior-manager', [App\Http\Controllers\AdminController::class, 'assignSeniorManager'])
         ->name('offices.assign-senior-manager');
+    Route::post('/offices/{office}/assign-oic', [App\Http\Controllers\AdminController::class, 'assignOic'])
+        ->name('offices.assign-oic');
     Route::get('/sections', [App\Http\Controllers\AdminController::class, 'sections'])
         ->name('sections');
     Route::post('/sections', [App\Http\Controllers\AdminController::class, 'storeSection'])

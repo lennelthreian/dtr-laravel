@@ -153,6 +153,16 @@ class DtrEditRequestController extends Controller
             }
         }
 
+        if ($office && $office->oic_id && $office->oic_id != $employee->id) {
+            $oicDtr = DtrUser::find($office->oic_id);
+            if ($oicDtr) {
+                $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
+                if ($oicUser) {
+                    $oicUser->notify(new EditRequestSubmitted($editRequest));
+                }
+            }
+        }
+
         if ($isOfficeSupervisor) {
             $ahUserId = DtrSetting::where('setting_key', 'agency_head_user_id')->value('setting_value');
             if ($ahUserId) {
@@ -200,6 +210,11 @@ class DtrEditRequestController extends Controller
 
         $seniorManagerOfficeIds = Office::where('senior_manager_id', $supervisorId)->pluck('id');
         if (in_array($employee->office_id, $seniorManagerOfficeIds->toArray())) {
+            return;
+        }
+
+        $oicOfficeIds = Office::where('oic_id', $supervisorId)->pluck('id');
+        if (in_array($employee->office_id, $oicOfficeIds->toArray())) {
             return;
         }
 

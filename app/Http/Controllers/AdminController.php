@@ -28,7 +28,7 @@ class AdminController extends Controller
 
     public function offices()
     {
-        $offices = Office::with(['sections', 'supervisor', 'seniorManager'])->withCount('sections')->orderBy('name')->get();
+        $offices = Office::with(['sections', 'supervisor', 'seniorManager', 'oic'])->withCount('sections')->orderBy('name')->get();
         $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
         return view('admin.offices', compact('offices', 'employees'));
     }
@@ -62,6 +62,15 @@ class AdminController extends Controller
         ]);
         $office->update(['senior_manager_id' => $data['senior_manager_id']]);
         return redirect()->route('admin.offices')->with('success', 'Senior manager assigned.');
+    }
+
+    public function assignOic(Request $request, Office $office)
+    {
+        $data = $request->validate([
+            'oic_id' => 'nullable|exists:dtr_users,id',
+        ]);
+        $office->update(['oic_id' => $data['oic_id']]);
+        return redirect()->route('admin.offices')->with('success', 'OIC assigned.');
     }
 
     public function sections()

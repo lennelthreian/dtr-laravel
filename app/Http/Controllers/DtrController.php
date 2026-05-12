@@ -48,17 +48,21 @@ class DtrController extends Controller
                 if ($dtrUser) {
                     $sectionSupervisorIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
                     $officeSupervisorIds = \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
+                    $oicOfficeIds = \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
                 }
 
                 $employeeQuery = DtrUser::where('is_active', true);
 
-                if (!empty($sectionSupervisorIds) || !empty($officeSupervisorIds)) {
-                    $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $officeSupervisorIds) {
+                if (!empty($sectionSupervisorIds) || !empty($officeSupervisorIds) || !empty($oicOfficeIds)) {
+                    $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $officeSupervisorIds, $oicOfficeIds) {
                         if (!empty($sectionSupervisorIds)) {
                             $q->whereIn('section_id', $sectionSupervisorIds);
                         }
                         if (!empty($officeSupervisorIds)) {
                             $q->orWhereIn('office_id', $officeSupervisorIds);
+                        }
+                        if (!empty($oicOfficeIds)) {
+                            $q->orWhereIn('office_id', $oicOfficeIds);
                         }
                     });
                     $canViewAll = true;
@@ -236,7 +240,10 @@ class DtrController extends Controller
         $officeSupervisorIds = $dtrUser
             ? \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
-        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($officeSupervisorIds);
+        $oicOfficeIds = $dtrUser
+            ? \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray()
+            : [];
+        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($officeSupervisorIds) || !empty($oicOfficeIds);
 
         if (!$canViewAll) {
             $ahUserId = DtrSetting::where('setting_key', 'agency_head_user_id')->value('setting_value');
@@ -402,6 +409,10 @@ class DtrController extends Controller
                         $q->where('id', $employee->id);
                     })->exists()
                     || \App\Models\Office::where('supervisor_id', $dtrUser->id)
+                        ->whereHas('dtrUsers', function ($q) use ($employee) {
+                            $q->where('id', $employee->id);
+                        })->exists()
+                    || \App\Models\Office::where('oic_id', $dtrUser->id)
                         ->whereHas('dtrUsers', function ($q) use ($employee) {
                             $q->where('id', $employee->id);
                         })->exists();

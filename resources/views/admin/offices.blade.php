@@ -41,50 +41,59 @@
         <div class="card">
             <h2>Offices ({{ $offices->count() }})</h2>
             <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th class="text-center">Sections</th>
-                            <th>Supervisor</th>
-                            <th>Senior Manager</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($offices as $office)
+                    <table>
+                        <thead>
                             <tr>
-                                <td><strong>{{ $office->name }}</strong></td>
-                                <td class="text-center">{{ $office->sections_count }}</td>
-                                <td>
-                                    @if ($office->supervisor)
-                                        {{ $office->supervisor->full_name }}
-                                    @else
-                                        <span class="text-muted">&mdash;</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($office->seniorManager)
-                                        {{ $office->seniorManager->full_name }}
-                                    @else
-                                        <span class="text-muted">&mdash;</span>
-                                    @endif
-                                </td>
-                                <td class="text-center nowrap">
-                                    <button class="btn btn-outline btn-xs" onclick="showAssign({{ $office->id }}, '{{ $office->name }}', {{ $office->supervisor_id ?? 'null' }})">Set Supervisor</button>
-                                    <button class="btn btn-outline btn-xs" onclick="showAssignSM({{ $office->id }}, '{{ $office->name }}', {{ $office->senior_manager_id ?? 'null' }})">Set Senior Manager</button>
-                                    <form method="POST" action="{{ route('admin.offices.delete', $office) }}"
-                                          onsubmit="return confirm('Delete this office and all its sections?')" style="display:inline">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-danger btn-xs">Delete</button>
-                                    </form>
-                                </td>
+                                <th>Name</th>
+                                <th class="text-center">Sections</th>
+                                <th>Supervisor</th>
+                                <th>Senior Manager</th>
+                                <th>OIC</th>
+                                <th class="text-center">Action</th>
                             </tr>
-                        @empty
-                            <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No offices yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($offices as $office)
+                                <tr>
+                                    <td><strong>{{ $office->name }}</strong></td>
+                                    <td class="text-center">{{ $office->sections_count }}</td>
+                                    <td>
+                                        @if ($office->supervisor)
+                                            {{ $office->supervisor->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($office->seniorManager)
+                                            {{ $office->seniorManager->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($office->oic)
+                                            {{ $office->oic->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center nowrap">
+                                        <button class="btn btn-outline btn-xs" onclick="showAssign({{ $office->id }}, '{{ $office->name }}', {{ $office->supervisor_id ?? 'null' }})">Set Supervisor</button>
+                                        <button class="btn btn-outline btn-xs" onclick="showAssignSM({{ $office->id }}, '{{ $office->name }}', {{ $office->senior_manager_id ?? 'null' }})">Set Senior Manager</button>
+                                        <button class="btn btn-outline btn-xs" onclick="showAssignOIC({{ $office->id }}, '{{ $office->name }}', {{ $office->oic_id ?? 'null' }})">Set OIC</button>
+                                        <form method="POST" action="{{ route('admin.offices.delete', $office) }}"
+                                              onsubmit="return confirm('Delete this office and all its sections?')" style="display:inline">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-danger btn-xs">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No offices yet.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
             </div>
         </div>
     </div>
@@ -135,6 +144,29 @@
         </div>
     </div>
 
+    <div id="assignOIC" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Set OIC</h2>
+            <p class="modal-sub" id="modalOICOfficeName"></p>
+            <form method="POST" id="assignOICForm">
+                @csrf
+                <div class="form-group">
+                    <label for="modal_oic_id">OIC</label>
+                    <select name="oic_id" id="modal_oic_id" class="form-control">
+                        <option value="">&mdash; None &mdash;</option>
+                        @foreach ($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->emp_code }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeAssignOIC()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function showAssign(id, name, supervisorId) {
             document.getElementById('modalOfficeName').textContent = name;
@@ -159,6 +191,18 @@
         }
         document.getElementById('assignSM').addEventListener('click', function(e) {
             if (e.target === this) closeAssignSM();
+        });
+        function showAssignOIC(id, name, oicId) {
+            document.getElementById('modalOICOfficeName').textContent = name;
+            document.getElementById('assignOICForm').action = '{{ url('/admin/offices') }}/' + id + '/assign-oic';
+            document.getElementById('modal_oic_id').value = oicId || '';
+            document.getElementById('assignOIC').classList.add('active');
+        }
+        function closeAssignOIC() {
+            document.getElementById('assignOIC').classList.remove('active');
+        }
+        document.getElementById('assignOIC').addEventListener('click', function(e) {
+            if (e.target === this) closeAssignOIC();
         });
     </script>
 </body>
