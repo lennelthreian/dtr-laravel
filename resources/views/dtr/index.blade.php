@@ -65,7 +65,17 @@
                     <div id="notifDropdown" class="notif-dropdown">
                         <div class="notif-header">Notifications</div>
                         @forelse ($unread as $notif)
-                            <a href="{{ route('supervisor.pending') }}" class="notif-item">
+                            @if ($notif->data['type'] === 'edit_request_submitted')
+                                <a href="{{ route('supervisor.pending') }}" class="notif-item">
+                            @else
+                                @php
+                                    $d = $notif->data['target_date'] ?? null;
+                                    $m = $d ? date('n', strtotime($d)) : date('n');
+                                    $y = $d ? date('Y', strtotime($d)) : date('Y');
+                                    $ec = $notif->data['emp_code'] ?? '';
+                                @endphp
+                                <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item">
+                            @endif
                                 <strong>{{ $notif->data['message'] }}</strong>
                                 <div class="notif-time">{{ $notif->created_at->diffForHumans() }}</div>
                             </a>

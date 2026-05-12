@@ -35,9 +35,10 @@ class SupervisorController extends Controller
 
             $sectionIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id');
             $officeIds = Office::where('supervisor_id', $dtrUser->id)->pluck('id');
+            $seniorManagerOfficeIds = Office::where('senior_manager_id', $dtrUser->id)->pluck('id');
 
             $requests = DtrEditRequest::with('employee')
-                ->where(function ($q) use ($sectionIds, $officeIds) {
+                ->where(function ($q) use ($sectionIds, $officeIds, $seniorManagerOfficeIds) {
                     if ($sectionIds->isNotEmpty()) {
                         $q->whereHas('employee', function ($q) use ($sectionIds) {
                             $q->whereIn('section_id', $sectionIds);
@@ -46,6 +47,11 @@ class SupervisorController extends Controller
                     if ($officeIds->isNotEmpty()) {
                         $q->orWhereHas('employee', function ($q) use ($officeIds) {
                             $q->whereIn('office_id', $officeIds);
+                        });
+                    }
+                    if ($seniorManagerOfficeIds->isNotEmpty()) {
+                        $q->orWhereHas('employee', function ($q) use ($seniorManagerOfficeIds) {
+                            $q->whereIn('office_id', $seniorManagerOfficeIds);
                         });
                     }
                 })

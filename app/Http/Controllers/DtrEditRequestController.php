@@ -198,6 +198,11 @@ class DtrEditRequestController extends Controller
             return;
         }
 
+        $seniorManagerOfficeIds = Office::where('senior_manager_id', $supervisorId)->pluck('id');
+        if (in_array($employee->office_id, $seniorManagerOfficeIds->toArray())) {
+            return;
+        }
+
         abort(403, 'You are not the supervisor of this employee.');
     }
 
