@@ -7,83 +7,95 @@
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="navbar">
-            <div class="navbar-left">
-                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline btn-sm">&larr; Dashboard</a>
+    <div class="layout-sidebar">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+                <p>MBLISTTDA e-DTR System</p>
             </div>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                @csrf
-                <button class="btn btn-outline btn-sm">Logout</button>
-            </form>
+            <nav class="sidebar-nav">
+                <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
+                <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
+                <a href="{{ route('admin.sections') }}" class="active"><span>Manage Sections</span></a>
+                <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ route('dtr.index') }}" class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:var(--white);width:100%;justify-content:center;">&larr; e-DTR Home</a>
+            </div>
         </div>
+        <div class="main-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Manage Sections</h1>
+                <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                    @csrf
+                    <button class="btn btn-outline btn-sm">Logout</button>
+                </form>
+            </div>
 
-        <div class="page-header">
-            <h1>Manage Sections</h1>
-        </div>
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
 
-        @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
+            <div class="card">
+                <h2>Add Section</h2>
+                <form method="POST" action="{{ route('admin.sections.store') }}" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    @csrf
+                    <select name="office_id" required class="form-control" style="flex:1; min-width:200px;">
+                        <option value="">-- Select Office --</option>
+                        @foreach ($offices as $office)
+                            <option value="{{ $office->id }}">{{ $office->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" name="name" placeholder="Section name" required class="form-control" style="flex:2; min-width:200px;">
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </form>
+                @error('name')
+                    <div style="color:var(--danger); font-size:12px; margin-top:5px;">{{ $message }}</div>
+                @enderror
+            </div>
 
-        <div class="card">
-            <h2>Add Section</h2>
-            <form method="POST" action="{{ route('admin.sections.store') }}" style="display:flex; gap:10px; flex-wrap:wrap;">
-                @csrf
-                <select name="office_id" required class="form-control" style="flex:1; min-width:200px;">
-                    <option value="">-- Select Office --</option>
-                    @foreach ($offices as $office)
-                        <option value="{{ $office->id }}">{{ $office->name }}</option>
-                    @endforeach
-                </select>
-                <input type="text" name="name" placeholder="Section name" required class="form-control" style="flex:2; min-width:200px;">
-                <button type="submit" class="btn btn-primary">Add</button>
-            </form>
-            @error('name')
-                <div style="color:var(--danger); font-size:12px; margin-top:5px;">{{ $message }}</div>
-            @enderror
-        </div>
-
-        <div class="card">
-            <h2>Sections ({{ $sections->count() }})</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Office</th>
-                            <th>Supervisor</th>
-                            <th class="text-center">Supervisor ID</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($sections as $section)
+            <div class="card">
+                <h2>Sections ({{ $sections->count() }})</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
                             <tr>
-                                <td><strong>{{ $section->name }}</strong></td>
-                                <td>{{ $section->office->name }}</td>
-                                <td>
-                                    @if ($section->supervisor)
-                                        {{ $section->supervisor->full_name }}
-                                    @else
-                                        <span class="text-muted">&mdash;</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">{{ $section->supervisor_id ?? '&mdash;' }}</td>
-                                <td class="text-center nowrap">
-                                    <button class="btn btn-outline btn-xs" onclick="showAssign({{ $section->id }}, '{{ $section->name }}', {{ $section->supervisor_id ?? 'null' }})">Set Supervisor</button>
-                                    <form method="POST" action="{{ route('admin.sections.delete', $section) }}"
-                                          onsubmit="return confirm('Delete this section?')" style="display:inline">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-danger btn-xs">Delete</button>
-                                    </form>
-                                </td>
+                                <th>Name</th>
+                                <th>Office</th>
+                                <th>Supervisor</th>
+                                <th class="text-center">Supervisor ID</th>
+                                <th class="text-center">Action</th>
                             </tr>
-                        @empty
-                            <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No sections yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($sections as $section)
+                                <tr>
+                                    <td><strong>{{ $section->name }}</strong></td>
+                                    <td>{{ $section->office->name }}</td>
+                                    <td>
+                                        @if ($section->supervisor)
+                                            {{ $section->supervisor->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">{{ $section->supervisor_id ?? '&mdash;' }}</td>
+                                    <td class="text-center nowrap">
+                                        <button class="btn btn-outline btn-xs" onclick="showAssign({{ $section->id }}, '{{ $section->name }}', {{ $section->supervisor_id ?? 'null' }})">Set Supervisor</button>
+                                        <form method="POST" action="{{ route('admin.sections.delete', $section) }}"
+                                              onsubmit="return confirm('Delete this section?')" style="display:inline">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-danger btn-xs">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No sections yet.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

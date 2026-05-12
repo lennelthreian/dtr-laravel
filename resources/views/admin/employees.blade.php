@@ -7,62 +7,73 @@
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="navbar">
-            <div class="navbar-left">
-                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline btn-sm">&larr; Dashboard</a>
+    <div class="layout-sidebar">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+                <p>MBLISTTDA e-DTR System</p>
             </div>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                @csrf
-                <button class="btn btn-outline btn-sm">Logout</button>
-            </form>
+            <nav class="sidebar-nav">
+                <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
+                <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
+                <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
+                <a href="{{ route('admin.employees') }}" class="active"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ route('dtr.index') }}" class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:var(--white);width:100%;justify-content:center;">&larr; e-DTR Home</a>
+            </div>
         </div>
+        <div class="main-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Assign Employees</h1>
+                <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                    @csrf
+                    <button class="btn btn-outline btn-sm">Logout</button>
+                </form>
+            </div>
 
-        <div class="page-header">
-            <h1>Assign Employees</h1>
-            <p>Assign employees to offices and sections</p>
-        </div>
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
 
-        @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
-
-        <div class="card">
-            <h2>Employees ({{ $employees->count() }})</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Emp Code</th>
-                            <th>Current Office</th>
-                            <th>Current Section</th>
-                            <th class="text-center">Assign</th>
-                            <th class="text-center">Password</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($employees as $employee)
+            <div class="card">
+                <h2>Employees ({{ $employees->count() }})</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
                             <tr>
-                                <td><strong>{{ $employee->full_name }}</strong></td>
-                                <td>{{ $employee->emp_code }}</td>
-                                <td>{{ $employee->office ?: '&mdash;' }}</td>
-                                <td>{{ $employee->section ?: '&mdash;' }}</td>
-                                <td class="text-center">
-                                    <button class="btn btn-outline btn-sm" onclick="showAssign({{ $employee->id }}, '{{ $employee->full_name }}', {{ $employee->office_id ?? 'null' }}, {{ $employee->section_id ?? 'null' }})">Assign</button>
-                                </td>
-                                <td class="text-center">
-                                    <form method="POST" action="{{ route('admin.employees.reset-password', $employee) }}" onsubmit="return confirm('Reset password for {{ $employee->full_name }} to \"password\"?')">
-                                        @csrf
-                                        <button class="btn btn-outline btn-sm">Reset</button>
-                                    </form>
-                                </td>
+                                <th>Employee</th>
+                                <th>Emp Code</th>
+                                <th>Current Office</th>
+                                <th>Current Section</th>
+                                <th class="text-center">Assign</th>
+                                <th class="text-center">Password</th>
                             </tr>
-                        @empty
-                            <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No employees.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($employees as $employee)
+                                <tr>
+                                    <td><strong>{{ $employee->full_name }}</strong></td>
+                                    <td>{{ $employee->emp_code }}</td>
+                                    <td>{{ $employee->office ?: '&mdash;' }}</td>
+                                    <td>{{ $employee->section ?: '&mdash;' }}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-outline btn-sm" onclick="showAssign({{ $employee->id }}, '{{ $employee->full_name }}', {{ $employee->office_id ?? 'null' }}, {{ $employee->section_id ?? 'null' }})">Assign</button>
+                                    </td>
+                                    <td class="text-center">
+                                        <form method="POST" action="{{ route('admin.employees.reset-password', $employee) }}" onsubmit="return confirm('Reset password for {{ $employee->full_name }} to &quot;password&quot;?')">
+                                            @csrf
+                                            <button class="btn btn-outline btn-sm">Reset</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No employees.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

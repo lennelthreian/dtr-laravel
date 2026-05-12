@@ -7,40 +7,51 @@
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="navbar">
-            <div class="navbar-left">
-                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline btn-sm">&larr; Dashboard</a>
+    <div class="layout-sidebar">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+                <p>MBLISTTDA e-DTR System</p>
             </div>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                @csrf
-                <button class="btn btn-outline btn-sm">Logout</button>
-            </form>
+            <nav class="sidebar-nav">
+                <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
+                <a href="{{ route('admin.offices') }}" class="active"><span>Manage Divisions</span></a>
+                <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
+                <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ route('dtr.index') }}" class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:var(--white);width:100%;justify-content:center;">&larr; e-DTR Home</a>
+            </div>
         </div>
+        <div class="main-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Manage Divisions</h1>
+                <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                    @csrf
+                    <button class="btn btn-outline btn-sm">Logout</button>
+                </form>
+            </div>
 
-        <div class="page-header">
-            <h1>Manage Divisions</h1>
-        </div>
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
 
-        @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
+            <div class="card">
+                <h2>Add Division</h2>
+                <form method="POST" action="{{ route('admin.offices.store') }}" style="display:flex; gap:10px;">
+                    @csrf
+                    <input type="text" name="name" placeholder="Division name" required class="form-control" style="flex:1;">
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </form>
+                @error('name')
+                    <div style="color:var(--danger); font-size:12px; margin-top:5px;">{{ $message }}</div>
+                @enderror
+            </div>
 
-        <div class="card">
-            <h2>Add Division</h2>
-            <form method="POST" action="{{ route('admin.offices.store') }}" style="display:flex; gap:10px;">
-                @csrf
-                <input type="text" name="name" placeholder="Division name" required class="form-control" style="flex:1;">
-                <button type="submit" class="btn btn-primary">Add</button>
-            </form>
-            @error('name')
-                <div style="color:var(--danger); font-size:12px; margin-top:5px;">{{ $message }}</div>
-            @enderror
-        </div>
-
-        <div class="card">
-            <h2>Offices ({{ $offices->count() }})</h2>
-            <div class="table-wrap">
+            <div class="card">
+                <h2>Offices ({{ $offices->count() }})</h2>
+                <div class="table-wrap">
                     <table>
                         <thead>
                             <tr>
@@ -94,6 +105,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
             </div>
         </div>
     </div>
