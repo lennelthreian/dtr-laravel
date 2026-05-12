@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>All DTRs - {{ $monthName }} {{ $year }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
         body { background: var(--white); padding: 20px; }
         .print-header { text-align: center; margin-bottom: 24px; }
@@ -26,6 +27,7 @@
 <body>
     <div class="no-print" style="margin-bottom:20px;">
         <button onclick="window.print()" class="btn btn-primary">Print All DTRs</button>
+        <button onclick="toggleTheme()" class="btn btn-outline" style="margin-left:8px;" id="themeToggle">Dark Mode</button>
         <a href="{{ route('dtr.index') }}" class="btn btn-outline" style="margin-left:8px;">&larr; Back</a>
     </div>
 
@@ -74,5 +76,24 @@
             </div>
         </div>
     @endforeach
+    <script>
+        function toggleTheme() {
+            var html = document.documentElement;
+            var isDark = html.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                document.getElementById('themeToggle').textContent = 'Dark Mode';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('themeToggle').textContent = 'Light Mode';
+            }
+        }
+        (function() {
+            var btn = document.getElementById('themeToggle');
+            if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
+        })();
+    </script>
 </body>
 </html>

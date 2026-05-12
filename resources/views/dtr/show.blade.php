@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>e-DTR - {{ $employee->full_name }} - {{ $monthName }} {{ $year }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
 <body>
     @php
@@ -21,7 +22,7 @@
     <div class="layout-sidebar">
         <div class="sidebar no-print">
             <div class="sidebar-header">
-                <h2>MBLISTTDA e-DTR</h2>
+                <h2>MBLISTTDA e-DTR System</h2>
                 <p>{{ auth()->user()->name }}</p>
             </div>
             <nav class="sidebar-nav">
@@ -40,6 +41,7 @@
                 @endif
             </nav>
             <div class="sidebar-footer">
+                <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%;">Logout</button>
@@ -420,6 +422,23 @@
                 d.classList.remove('active');
             }
         });
+        function toggleTheme() {
+            var html = document.documentElement;
+            var isDark = html.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                document.getElementById('themeToggle').textContent = 'Dark Mode';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('themeToggle').textContent = 'Light Mode';
+            }
+        }
+        (function() {
+            var btn = document.getElementById('themeToggle');
+            if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
+        })();
     </script>
 </body>
 </html>

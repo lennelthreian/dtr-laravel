@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Employees - MBLISTTDA e-DTR System</title>
+    <title>Assign Employees - e-DTR Records</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
 <body>
     <div class="layout-sidebar">
@@ -21,6 +22,7 @@
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
             </nav>
             <div class="sidebar-footer">
+                <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
                 <a href="{{ route('dtr.index') }}" class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:var(--white);width:100%;justify-content:center;">&larr; e-DTR Home</a>
             </div>
         </div>
@@ -108,6 +110,23 @@
     </div>
 
     <script>
+        function toggleTheme() {
+            var html = document.documentElement;
+            var isDark = html.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                document.getElementById('themeToggle').textContent = 'Dark Mode';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('themeToggle').textContent = 'Light Mode';
+            }
+        }
+        (function() {
+            var btn = document.getElementById('themeToggle');
+            if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
+        })();
         const offices = @json($offices);
 
         function showAssign(id, name, officeId, sectionId) {
