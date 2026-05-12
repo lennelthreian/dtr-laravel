@@ -35,6 +35,32 @@
     </div>
 
     @foreach ($allDtrs as $index => $item)
+        @php
+            $presentDays = 0; $totalMin = 0; $totalLate = 0; $totalUndertime = 0;
+            foreach ($item['dtrData'] as $dayNum => $day) {
+                $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
+                if ($day['has_punch'] && $dow <= 5) {
+                    $presentDays++;
+                    if ($day['total_hours']) {
+                        $parts = explode(':', $day['total_hours']);
+                        $totalMin += (int) $parts[0] * 60 + (int) $parts[1];
+                    }
+                    if (strpos($day['remarks'], 'Late:') !== false) {
+                        preg_match_all('/(\d+):(\d+)/', $day['remarks'], $m);
+                        for ($i = 0; $i < count($m[0]); $i++) {
+                            $totalLate += (int) $m[1][$i] * 60 + (int) $m[2][$i];
+                        }
+                    }
+                    if (strpos($day['remarks'], 'UT:') !== false) {
+                        preg_match('/UT: (\d+):(\d+)/', $day['remarks'], $u);
+                        if (isset($u[1])) {
+                            $totalUndertime += (int) $u[1] * 60 + (int) $u[2];
+                        }
+                    }
+                }
+            }
+            $totalMinutes = $totalMin;
+        @endphp
         <div class="{{ $index > 0 ? 'employee-divider' : '' }}" style="margin-bottom:40px;">
             <div class="dtr-page">
                 <div class="dtr-cols">
