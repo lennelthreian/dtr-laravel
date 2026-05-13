@@ -17,7 +17,7 @@
                 @if (!empty($settings['logo_path']))
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
-                <h2>{{ $settings['system_name'] ?? 'e-DTR System' }}</h2>
+                <h2>{{ $settings['system_name'] ?? 'e-DTR Records' }}</h2>
                 <p>{{ $currentUser->name }}</p>
             </div>
             <nav class="sidebar-nav">
@@ -47,7 +47,7 @@
         <div class="main-content">
             <div class="navbar no-print" style="margin-bottom:20px;">
                 <div class="navbar-left">
-                    <h1 style="font-size:18px; color:var(--primary); margin:0;">{{ $settings['system_name'] ?? 'e-DTR Records' }}</h1>
+                    <h1 style="font-size:18px; color:var(--primary); margin:0;">e-DTR Records</h1>
                 </div>
                 @if ($dtrData)
                     <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>

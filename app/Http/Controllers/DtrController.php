@@ -755,19 +755,19 @@ class DtrController extends Controller
 
             foreach ($dayPunches as $p) {
                 $t = $p->punch_time->timestamp;
-                $state = (int) $p->punch_state;
 
-                $isIn = $state === 0 || $state === 5;
-                $isOut = $state === 1 || $state === 4;
-
-                if ($isIn && $t <= $amEnd) {
-                    if ($amIn === null || $t < $amIn) $amIn = $t;
-                } elseif ($isOut && $t <= $amEnd) {
-                    if ($amOut === null || $t > $amOut) $amOut = $t;
-                } elseif ($isIn && $t > $amEnd) {
-                    if ($pmIn === null || $t < $pmIn) $pmIn = $t;
-                } elseif ($isOut && $t > $amEnd) {
-                    if ($pmOut === null || $t > $pmOut) $pmOut = $t;
+                if ($t <= $amEnd) {
+                    if (abs($t - $amStart) <= abs($t - $amEnd)) {
+                        if ($amIn === null || $t < $amIn) $amIn = $t;
+                    } else {
+                        if ($amOut === null || $t > $amOut) $amOut = $t;
+                    }
+                } else {
+                    if (abs($t - $pmStart) <= abs($t - $pmEnd)) {
+                        if ($pmIn === null || $t < $pmIn) $pmIn = $t;
+                    } else {
+                        if ($pmOut === null || $t > $pmOut) $pmOut = $t;
+                    }
                 }
             }
 

@@ -17,7 +17,7 @@
                 @if (!empty($settings['logo_path']))
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
-                <h2>{{ $settings['system_name'] ?? 'e-DTR System' }}</h2>
+                <h2>{{ $settings['system_name'] ?? 'e-DTR Records' }}</h2>
                 <p>{{ $currentUser->name }}</p>
             </div>
             <nav class="sidebar-nav">
