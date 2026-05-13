@@ -129,17 +129,17 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
                             case 'absent':
-                                $dtrData[$dayNum]['am_in'] = '';
-                                $dtrData[$dayNum]['am_out'] = '';
-                                $dtrData[$dayNum]['pm_in'] = '';
-                                $dtrData[$dayNum]['pm_out'] = '';
+                                $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                                $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                                $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                                $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                                 $dtrData[$dayNum]['total_hours'] = '';
                                 $dtrData[$dayNum]['remarks'] = 'Absent';
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
                             case 'halfday_am':
-                                $dtrData[$dayNum]['am_in'] = '';
-                                $dtrData[$dayNum]['am_out'] = '';
+                                $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                                $dtrData[$dayNum]['am_out'] = 'ABSENT';
                                 if ($edit->field === 'am_out' && $edit->new_value) {
                                     $dtrData[$dayNum]['am_out'] = $edit->new_value;
                                 }
@@ -147,8 +147,8 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
                             case 'halfday_pm':
-                                $dtrData[$dayNum]['pm_in'] = '';
-                                $dtrData[$dayNum]['pm_out'] = '';
+                                $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                                $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                                 if ($edit->field === 'pm_in' && $edit->new_value) {
                                     $dtrData[$dayNum]['pm_in'] = $edit->new_value;
                                 }
@@ -313,17 +313,17 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
                 case 'absent':
-                    $dtrData[$dayNum]['am_in'] = '';
-                    $dtrData[$dayNum]['am_out'] = '';
-                    $dtrData[$dayNum]['pm_in'] = '';
-                    $dtrData[$dayNum]['pm_out'] = '';
+                    $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                     $dtrData[$dayNum]['total_hours'] = '';
                     $dtrData[$dayNum]['remarks'] = 'Absent';
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
                 case 'halfday_am':
-                    $dtrData[$dayNum]['am_in'] = '';
-                    $dtrData[$dayNum]['am_out'] = '';
+                    $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['am_out'] = 'ABSENT';
                     if ($edit->field === 'am_out' && $edit->new_value) {
                         $dtrData[$dayNum]['am_out'] = $edit->new_value;
                     }
@@ -331,8 +331,8 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
                 case 'halfday_pm':
-                    $dtrData[$dayNum]['pm_in'] = '';
-                    $dtrData[$dayNum]['pm_out'] = '';
+                    $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                     if ($edit->field === 'pm_in' && $edit->new_value) {
                         $dtrData[$dayNum]['pm_in'] = $edit->new_value;
                     }
@@ -502,17 +502,17 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
                     case 'absent':
-                        $dtrData[$dayNum]['am_in'] = '';
-                        $dtrData[$dayNum]['am_out'] = '';
-                        $dtrData[$dayNum]['pm_in'] = '';
-                        $dtrData[$dayNum]['pm_out'] = '';
+                        $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                         $dtrData[$dayNum]['total_hours'] = '';
                         $dtrData[$dayNum]['remarks'] = 'Absent';
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
                     case 'halfday_am':
-                        $dtrData[$dayNum]['am_in'] = '';
-                        $dtrData[$dayNum]['am_out'] = '';
+                        $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['am_out'] = 'ABSENT';
                         if ($edit->field === 'am_out' && $edit->new_value) {
                             $dtrData[$dayNum]['am_out'] = $edit->new_value;
                         }
@@ -520,8 +520,8 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
                     case 'halfday_pm':
-                        $dtrData[$dayNum]['pm_in'] = '';
-                        $dtrData[$dayNum]['pm_out'] = '';
+                        $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                         if ($edit->field === 'pm_in' && $edit->new_value) {
                             $dtrData[$dayNum]['pm_in'] = $edit->new_value;
                         }

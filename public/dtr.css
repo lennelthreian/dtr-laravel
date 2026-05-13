@@ -669,19 +669,68 @@ tbody tr:last-child td { border-bottom: none; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .stats-row { flex-wrap: wrap; }
-  .stat-card { min-width: calc(50% - 8px); }
-  .sidebar { width: 56px; overflow: hidden; }
-  .sidebar-header h2, .sidebar-header p, .sidebar-nav a span, .badge, .sidebar-footer { display: none; }
-  .sidebar-nav a { justify-content: center; padding: 12px; font-size: 18px; }
-  .main-content { padding: 16px; }
   .layout-sidebar { flex-direction: column; }
   .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 8px 16px; }
-  .sidebar-header { border: none; padding: 0; }
-  .sidebar-nav { display: flex; padding: 0; margin-left: auto; gap: 4px; }
-  .sidebar-nav a { padding: 6px 10px; font-size: 12px; }
+  .sidebar-header { border: none; padding: 0; display: flex; align-items: center; gap: 12px; }
+  .sidebar-header h2 { font-size: 14px; margin: 0; }
+  .sidebar-header p { display: none; }
+  .sidebar-nav { display: flex; padding: 0; margin-left: auto; gap: 4px; overflow-x: auto; }
+  .sidebar-nav a { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .sidebar-nav a span { display: inline; }
   .sidebar-footer { display: none; }
+  .sidebar-nav a .badge { display: inline; }
+
+  .main-content {
+    padding: 16px;
+    width: 100%;
+  }
+
+  .navbar { justify-content: center; gap: 6px; }
+  .navbar-left { margin-right: 0; width: 100%; }
+  .navbar-left h1 { font-size: 16px !important; text-align: center; }
+
+  .stats-row { flex-wrap: wrap; gap: 10px; }
+  .stat-card { min-width: calc(50% - 5px); padding: 16px 10px; }
+  .stat-card h3 { font-size: 22px; }
+
+  .card { padding: 16px; }
+  .card h2 { font-size: 15px; }
+  .card-link { padding: 20px 16px; }
+
   .form-row { flex-direction: column; gap: 0; }
-  .navbar { justify-content: center; }
-  .navbar-left { margin-right: 0; }
+
+  .modal-box { padding: 20px; margin: 10px; max-width: calc(100vw - 20px); }
+  .modal-box h2 { font-size: 16px; }
+
+  .notif-dropdown { width: calc(100vw - 32px); right: -60px; }
+
+  .sidebar-header { padding: 16px 16px 12px; }
+  .sidebar-header h2 { font-size: 14px; }
+  .sidebar-header p { font-size: 10px; }
+  .sidebar-nav { padding: 8px 8px; }
+  .sidebar-nav a { padding: 8px 12px; font-size: 12px; }
+  .sidebar-footer { padding: 12px 16px; }
+
+  .dtr-layout { flex-direction: column; }
+  .dtr-sidebar-form { flex: none; width: 100%; min-width: 0; }
+
+  .dtr-page { padding: 8px; }
+  .dtr-cols { gap: 16px; }
+  .dtr-table thead th { font-size: 7px; padding: 2px 1px; }
+  .dtr-table tbody td { font-size: 7px; padding: 1px; height: auto; }
+  .time-col { font-size: 8px; width: 28px; }
+  .day-col { width: 14px; }
+  .day-col .dow { font-size: 5px; }
+  .hours-col { width: 20px; font-size: 7px; }
+  .remarks-col { width: 28px; font-size: 6px; }
+  .action-col { width: 12px; }
+  .edit-btn { font-size: 9px; padding: 0 3px; }
+  .dtr-summary { font-size: 7px; padding: 2px 4px; flex-wrap: wrap; gap: 4px; }
+  .sum-left { font-size: 7px; }
+  .sum-right { font-size: 6px; }
+
+  .req-group h3 { font-size: 14px; }
+
+  .admin-header { flex-direction: column; gap: 12px; align-items: flex-start !important; }
+  .admin-header h1 { font-size: 18px !important; }
 }

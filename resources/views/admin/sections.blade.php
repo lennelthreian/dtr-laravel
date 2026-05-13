@@ -30,7 +30,7 @@
             </div>
         </div>
         <div class="main-content">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+            <div class="admin-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
                 <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Manage Sections</h1>
                 <form method="POST" action="{{ route('logout') }}" style="display:inline">
                     @csrf

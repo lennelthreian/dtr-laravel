@@ -156,7 +156,6 @@
     </div>
 </div>
 
-
 <div style="text-align:left; font-style:italic; font-size:9px; margin:8px 0;">
     I certify on my honor that the above is a true and correct report<br>
     of the hours of work performed, record of which was made daily<br>

@@ -261,7 +261,7 @@
                     <label for="modal_type">Type</label>
                     <select name="type" id="modal_type" required class="form-control" onchange="toggleEditFields()">
                         <option value="time_correction">Time Correction</option>
-                        <option value="absent">Whole Day Absent</option>
+                        <option value="absent">Absent</option>
                         <option value="halfday_am">Halfday Absent (AM)</option>
                         <option value="halfday_pm">Halfday Absent (PM)</option>
                         <option value="holiday">Holiday</option>
@@ -312,6 +312,23 @@
                     </div>
                 </div>
 
+                <div id="absentFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Absent Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="absent_type" value="whole_day" onchange="setAbsentType('absent')" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="absent_type" value="am" onchange="setAbsentType('halfday_am')"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="absent_type" value="pm" onchange="setAbsentType('halfday_pm')"> PM
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="modal_reason">Reason</label>
                     <textarea name="reason" id="modal_reason" required rows="3" placeholder="Explain why" class="form-control"></textarea>
@@ -351,6 +368,7 @@
             document.getElementById('modal_so_number').value = '';
             document.getElementById('modal_to_number').value = '';
             document.getElementById('modal_reason').value = '';
+            document.querySelector('input[name="absent_type"][value="whole_day"]').checked = true;
         }
 
         function closeEditRequest() {
@@ -363,6 +381,7 @@
             var hdFields = document.getElementById('halfdayFields');
             var soFields = document.getElementById('soFields');
             var toFields = document.getElementById('toFields');
+            var absentFields = document.getElementById('absentFields');
             var fieldSelect = document.getElementById('modal_field');
             var newValueInput = document.getElementById('modal_new_value');
             var halfdayTime = document.getElementById('modal_halfday_time');
@@ -372,6 +391,7 @@
             hdFields.style.display = 'none';
             soFields.style.display = 'none';
             toFields.style.display = 'none';
+            absentFields.style.display = 'none';
             fieldSelect.required = false;
             newValueInput.required = false;
             halfdayTime.required = false;
@@ -396,6 +416,8 @@
                 halfdayTime.required = false;
                 halfdayTime.disabled = false;
                 halfdayTime.placeholder = 'e.g. 14:00';
+            } else if (type === 'absent') {
+                absentFields.style.display = 'block';
             } else if (type === 'special_order') {
                 soFields.style.display = 'block';
                 document.getElementById('modal_so_number').required = true;
@@ -403,6 +425,10 @@
                 toFields.style.display = 'block';
                 document.getElementById('modal_to_number').required = true;
             }
+        }
+
+        function setAbsentType(subType) {
+            document.getElementById('modal_type').value = subType;
         }
 
         document.getElementById('editRequestModal').addEventListener('click', function(e) {
