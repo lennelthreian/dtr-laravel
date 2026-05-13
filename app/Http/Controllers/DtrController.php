@@ -14,7 +14,10 @@ class DtrController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $settings = DtrSetting::getSettings();
+        $settings = $this->applyFourDaySettings($settings);
 
+        $isSupervisor = $this->checkIsSupervisor($user);
         $sectionSupervisorIds = [];
         $officeSupervisorIds = [];
         $canViewAll = $user->is_super;
@@ -25,7 +28,7 @@ class DtrController extends Controller
                 ->orderBy('last_name')
                 ->get();
         } else {
-            $ahUserId = DtrSetting::where('setting_key', 'agency_head_user_id')->value('setting_value');
+            $ahUserId = $settings['agency_head_user_id'] ?? null;
 
             if ($ahUserId && (int) $ahUserId === $user->id) {
                 $osIds = \App\Models\Office::whereNotNull('supervisor_id')->pluck('supervisor_id')->toArray();
@@ -99,7 +102,6 @@ class DtrController extends Controller
                     ->first();
 
                 if ($employee) {
-                    $settings = DtrSetting::getSettings();
                     $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
                     $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
@@ -162,16 +164,19 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['remarks'] = 'WFH';
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 $dtrData[$dayNum]['is_wfh'] = true;
+                                $dtrData[$dayNum]['total_hours'] = ($settings['four_day_work_week'] ?? '0') === '1' ? '10:00' : '08:00';
                                 break;
                             case 'special_order':
                                 $dtrData[$dayNum]['remarks'] = 'Special Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 $dtrData[$dayNum]['so_number'] = $edit->new_value;
+                                $dtrData[$dayNum]['total_hours'] = ($settings['four_day_work_week'] ?? '0') === '1' ? '10:00' : '08:00';
                                 break;
                             case 'travel_order':
                                 $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 $dtrData[$dayNum]['to_number'] = $edit->new_value;
+                                $dtrData[$dayNum]['total_hours'] = ($settings['four_day_work_week'] ?? '0') === '1' ? '10:00' : '08:00';
                                 break;
                         }
                     }
@@ -195,7 +200,7 @@ class DtrController extends Controller
 
                     foreach ($dtrData as $dayNum => $day) {
                         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
-                        if ($day['has_punch'] && $dow <= 5) {
+                        if ($day['has_punch'] && $dow <= $settings['max_dow']) {
                             $presentDays++;
                             if ($day['total_hours']) {
                                 $parts = explode(':', $day['total_hours']);
@@ -219,19 +224,20 @@ class DtrController extends Controller
             }
         }
 
-        $settings = $dtrData ? DtrSetting::getSettings() : [];
         $isOwnDtr = $employee && isset($empCode) && $empCode === $user->emp_code;
 
         return view('dtr.index', compact(
             'employees', 'dtrData', 'month', 'year', 'monthName',
             'daysInMonth', 'presentDays', 'totalMinutes', 'totalLate',
-            'totalUndertime', 'employee', 'settings', 'isOwnDtr'
+            'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor'
         ));
     }
 
     public function show(Request $request)
     {
         $user = auth()->user();
+        $settings = DtrSetting::getSettings();
+        $settings = $this->applyFourDaySettings($settings);
 
         $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
         $sectionSupervisorIds = $dtrUser
@@ -245,11 +251,9 @@ class DtrController extends Controller
             : [];
         $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($officeSupervisorIds) || !empty($oicOfficeIds);
 
-        if (!$canViewAll) {
-            $ahUserId = DtrSetting::where('setting_key', 'agency_head_user_id')->value('setting_value');
-            if ($ahUserId && (int) $ahUserId === $user->id) {
-                $canViewAll = true;
-            }
+        $ahUserId = $settings['agency_head_user_id'] ?? null;
+        if (!$canViewAll && $ahUserId && (int) $ahUserId === $user->id) {
+            $canViewAll = true;
         }
 
         if ($canViewAll) {
@@ -272,7 +276,6 @@ class DtrController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $ahUserId = DtrSetting::where('setting_key', 'agency_head_user_id')->value('setting_value');
         if (!$user->is_super && $ahUserId && (int) $ahUserId === $user->id) {
             $osIds = \App\Models\Office::whereNotNull('supervisor_id')->pluck('supervisor_id')->toArray();
             $ahDtr = DtrUser::where('emp_code', $user->emp_code)->first();
@@ -283,7 +286,6 @@ class DtrController extends Controller
             }
         }
 
-        $settings = DtrSetting::getSettings();
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
@@ -379,7 +381,7 @@ class DtrController extends Controller
 
         foreach ($dtrData as $dayNum => $day) {
             $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
-            if ($day['has_punch'] && $dow <= 5) {
+            if ($day['has_punch'] && $dow <= $settings['max_dow']) {
                 $presentDays++;
                 if ($day['total_hours']) {
                     $parts = explode(':', $day['total_hours']);
@@ -401,22 +403,20 @@ class DtrController extends Controller
         }
 
         $isOwnDtr = $empCode === $user->emp_code;
-        $isSupervisor = false;
-        if (!$user->is_super) {
-            if ($dtrUser) {
-                $isSupervisor = Section::where('supervisor_id', $dtrUser->id)
+        $isSupervisor = $user->is_super;
+        if (!$isSupervisor && $dtrUser) {
+            $isSupervisor = Section::where('supervisor_id', $dtrUser->id)
+                ->whereHas('dtrUsers', function ($q) use ($employee) {
+                    $q->where('id', $employee->id);
+                })->exists()
+                || \App\Models\Office::where('supervisor_id', $dtrUser->id)
                     ->whereHas('dtrUsers', function ($q) use ($employee) {
                         $q->where('id', $employee->id);
                     })->exists()
-                    || \App\Models\Office::where('supervisor_id', $dtrUser->id)
-                        ->whereHas('dtrUsers', function ($q) use ($employee) {
-                            $q->where('id', $employee->id);
-                        })->exists()
-                    || \App\Models\Office::where('oic_id', $dtrUser->id)
-                        ->whereHas('dtrUsers', function ($q) use ($employee) {
-                            $q->where('id', $employee->id);
-                        })->exists();
-            }
+                || \App\Models\Office::where('oic_id', $dtrUser->id)
+                    ->whereHas('dtrUsers', function ($q) use ($employee) {
+                        $q->where('id', $employee->id);
+                    })->exists();
         }
 
         $pendingRequests = DtrEditRequest::with('employee')
@@ -462,18 +462,29 @@ class DtrController extends Controller
             ->get();
 
         $settings = DtrSetting::getSettings();
+        $settings = $this->applyFourDaySettings($settings);
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+        // Batch load all approved edit requests for ALL employees this month to avoid N+1
+        $empCodes = $employees->pluck('emp_code');
+        $allApprovedEdits = DtrEditRequest::with('employee')
+            ->whereHas('employee', function ($q) use ($empCodes) {
+                $q->whereIn('emp_code', $empCodes);
+            })
+            ->whereYear('target_date', $year)
+            ->whereMonth('target_date', $month)
+            ->approved()
+            ->get()
+            ->groupBy(function ($edit) {
+                return $edit->employee->emp_code;
+            });
 
         $allDtrs = [];
         foreach ($employees as $employee) {
             $dtrData = $this->computeDtr($employee->emp_code, $year, $month, $settings);
 
-            $approvedEdits = DtrEditRequest::with('employee')
-                ->forEmployee($employee->emp_code)
-                ->forPeriod($year, $month)
-                ->approved()
-                ->get();
+            $approvedEdits = $allApprovedEdits->get($employee->emp_code, collect());
 
             foreach ($approvedEdits as $edit) {
                 $dayNum = (int) $edit->target_date->format('j');
@@ -561,6 +572,31 @@ class DtrController extends Controller
         return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings'));
     }
 
+    private function applyFourDaySettings($settings)
+    {
+        if (($settings['four_day_work_week'] ?? '0') === '1') {
+            $settings['am_start'] = $settings['fdww_am_start'] ?? '07:00';
+            $settings['am_end'] = $settings['fdww_am_end'] ?? '12:00';
+            $settings['pm_start'] = $settings['fdww_pm_start'] ?? '13:00';
+            $settings['pm_end'] = $settings['fdww_pm_end'] ?? '19:00';
+            $settings['am_start_flexi'] = $settings['fdww_am_start_flexi'] ?? '60';
+            $settings['pm_end_flexi'] = $settings['fdww_pm_end_flexi'] ?? '60';
+            $settings['max_dow'] = 4;
+        } else {
+            $settings['max_dow'] = 5;
+        }
+        return $settings;
+    }
+
+    private function checkIsSupervisor($user)
+    {
+        if ($user->is_super) return true;
+        $dtrU = DtrUser::where('emp_code', $user->emp_code)->first();
+        if (!$dtrU) return false;
+        return Section::where('supervisor_id', $dtrU->id)->exists()
+            || \App\Models\Office::where('supervisor_id', $dtrU->id)->exists();
+    }
+
     private function recalcHours($day, $settings)
     {
         $amIn = $day['am_in'] ?? '';
@@ -618,6 +654,8 @@ class DtrController extends Controller
 
     private function recalcRemarks($day, $settings)
     {
+        $settings = $this->applyFourDaySettings($settings);
+
         $amIn = $day['am_in'] ?? '';
         $amOut = $day['am_out'] ?? '';
         $pmIn = $day['pm_in'] ?? '';
@@ -625,12 +663,16 @@ class DtrController extends Controller
 
         $settingsAmStart = $settings['am_start'] ?? '08:00';
         $settingsPmStart = $settings['pm_start'] ?? '13:00';
+        $settingsPmEnd = $settings['pm_end'] ?? '17:00';
+        $amStartFlexi = ((int)($settings['am_start_flexi'] ?? 60)) * 60;
+        $pmEndFlexi = ((int)($settings['pm_end_flexi'] ?? 60)) * 60;
 
         $remarks = [];
 
         $lateAM = 0;
         if ($amIn) {
-            $amLateThreshold = strtotime('09:00');
+            $amStartTS = strtotime($settingsAmStart);
+            $amLateThreshold = $amStartTS + $amStartFlexi;
             $amInTS = strtotime($amIn);
             if ($amInTS > $amLateThreshold) {
                 $lateAM = ($amInTS - $amLateThreshold) / 60;
@@ -651,12 +693,12 @@ class DtrController extends Controller
             $remarks[] = 'Late: ' . implode('+', $parts);
         }
 
-        $settingsPmEnd = $settings['pm_end'] ?? '17:00';
         $undertimeMinutes = 0;
         if ($pmIn && preg_match('/^\d/', $pmIn) && $pmOut) {
             $pmEndTS = strtotime($settingsPmEnd);
+            $pmUndertimeThreshold = $pmEndTS - $pmEndFlexi;
             $pmOutTS = strtotime($pmOut);
-            if ($pmOutTS < $pmEndTS) {
+            if ($pmOutTS < $pmUndertimeThreshold) {
                 $undertimeMinutes = ($pmEndTS - $pmOutTS) / 60;
             }
         }
@@ -678,10 +720,13 @@ class DtrController extends Controller
             ->ordered()
             ->get();
 
+        $settings = $this->applyFourDaySettings($settings);
         $settingsAmStart = $settings['am_start'] ?? '08:00';
         $settingsAmEnd = $settings['am_end'] ?? '12:00';
         $settingsPmStart = $settings['pm_start'] ?? '13:00';
         $settingsPmEnd = $settings['pm_end'] ?? '17:00';
+        $amStartFlexi = ((int)($settings['am_start_flexi'] ?? 60)) * 60;
+        $pmEndFlexi = ((int)($settings['pm_end_flexi'] ?? 60)) * 60;
 
         $seen = [];
         $daily = [];
@@ -729,7 +774,7 @@ class DtrController extends Controller
             $remarks = [];
 
             $lateAM = 0;
-            $amLateThreshold = strtotime($date . ' 09:00');
+            $amLateThreshold = $amStart + $amStartFlexi;
             if ($amIn && $amIn > $amLateThreshold) {
                 $lateAM = ($amIn - $amLateThreshold) / 60;
             }
@@ -745,7 +790,8 @@ class DtrController extends Controller
             }
 
             $undertimeMinutes = 0;
-            if ($pmOut && $pmOut < $pmEnd) {
+            $pmUndertimeThreshold = $pmEnd - $pmEndFlexi;
+            if ($pmOut && $pmOut < $pmUndertimeThreshold) {
                 $undertimeMinutes = ($pmEnd - $pmOut) / 60;
             }
             if ($undertimeMinutes > 0) {
@@ -782,4 +828,20 @@ class DtrController extends Controller
 
         return $dtr;
     }
+
+    public function toggleWorkWeek(Request $request)
+    {
+        $setting = DtrSetting::where('setting_key', 'four_day_work_week')->first();
+        if ($setting) {
+            $val = $request->input('value');
+            if (!in_array($val, ['0', '1'])) {
+                return response()->json(['success' => false], 400);
+            }
+            $setting->update(['setting_value' => $val]);
+            return response()->json(['success' => true, 'value' => $val]);
+        }
+        return response()->json(['success' => false], 400);
+    }
+
+
 }

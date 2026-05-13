@@ -19,10 +19,11 @@
 </table>
 
 @php
+    $maxDow = $settings['max_dow'] ?? (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : 5);
     $totalWeekdays = 0; $presentWeekdays = 0; $totalSaturdays = 0; $presentSaturdays = 0;
     for ($d = 1; $d <= $daysInMonth; $d++) {
         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
-        if ($dow <= 5) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentWeekdays++; }
+        if ($dow <= $maxDow) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentWeekdays++; }
         if ($dow == 6) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentSaturdays++; }
     }
 @endphp
@@ -56,12 +57,13 @@
             @php
                 $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
                 $dayOfWeek = date('l', strtotime($dateStr));
-                $isWeekend = in_array($dayOfWeek, ['Saturday', 'Sunday']);
+                $dowN = date('N', strtotime($dateStr));
+                $isNonWorkingDay = $dowN > $maxDow || in_array($dayOfWeek, ['Saturday', 'Sunday']);
                 $hasData = isset($dtrData[$d]) && $dtrData[$d]['has_punch'];
             @endphp
             @php
                 $edited = isset($dtrData[$d]['is_edited']) && $dtrData[$d]['is_edited'];
-                $rowClass = trim(($isWeekend && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : '') . ($edited ? 'edited' : ''));
+                $rowClass = trim(($isNonWorkingDay && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : '') . ($edited ? 'edited' : ''));
             @endphp
             <tr class="{{ $rowClass }}">
                 <td class="day-col">
@@ -73,21 +75,21 @@
                     <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
                     <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
                     <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
-                    <td class="hours-col"></td>
+                    <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif (!empty($dtrData[$d]['to_number']))
                     <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
                     <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
                     <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
                     <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
-                    <td class="hours-col"></td>
+                    <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif (!empty($dtrData[$d]['is_wfh']))
                     <td class="time-col has-val">WFH</td>
                     <td class="time-col has-val">WFH</td>
                     <td class="time-col has-val">WFH</td>
                     <td class="time-col has-val">WFH</td>
-                    <td class="hours-col"></td>
+                    <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif (!empty($dtrData[$d]['is_holiday']))
                     <td class="time-col has-val">Holiday</td>
@@ -110,10 +112,10 @@
                         @endif
                     </td>
                 @else
-                    <td class="time-col{{ !$isWeekend ? ' no-entry' : '' }}"></td>
-                    <td class="time-col{{ !$isWeekend ? ' no-entry' : '' }}"></td>
-                    <td class="time-col{{ !$isWeekend ? ' no-entry' : '' }}"></td>
-                    <td class="time-col{{ !$isWeekend ? ' no-entry' : '' }}"></td>
+                    <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
+                    <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
+                    <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
+                    <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
                     <td class="hours-col"></td>
                     <td class="remarks-col"></td>
                 @endif
@@ -148,6 +150,7 @@
         @if ($totalLate > 0) Late: {{ $totalLateFormatted }} @endif
         @if ($totalUndertime > 0){{ $totalLate > 0 ? ' | ' : '' }} UT: {{ $totalUndertimeFormatted }} @endif
         &nbsp;|&nbsp;
+        {{ ($settings['four_day_work_week'] ?? '0') === '1' ? '4-Day' : '5-Day' }}
         AM {{ $settings['am_start'] ?? '08:00' }}-{{ $settings['am_end'] ?? '12:00' }}
         PM {{ $settings['pm_start'] ?? '13:00' }}-{{ $settings['pm_end'] ?? '17:00' }}
     </div>

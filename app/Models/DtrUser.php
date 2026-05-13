@@ -11,7 +11,7 @@ class DtrUser extends Model
 
     protected $fillable = [
         'emp_code', 'first_name', 'last_name', 'middle_name',
-        'position', 'department', 'office', 'section', 'office_id', 'section_id',
+        'position', 'sex', 'department', 'office', 'section', 'office_id', 'section_id',
         'employee_status', 'is_active',
     ];
 

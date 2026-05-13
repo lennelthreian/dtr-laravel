@@ -40,8 +40,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/dtr/edit-request/{edit_request}/reject', [App\Http\Controllers\DtrEditRequestController::class, 'reject'])
         ->name('dtr.edit-request.reject');
 
+    Route::post('/dtr/toggle-work-week', [App\Http\Controllers\DtrController::class, 'toggleWorkWeek'])
+        ->name('dtr.toggle-work-week');
+
     Route::post('/notifications/mark-read', [App\Http\Controllers\DtrEditRequestController::class, 'markAsRead'])
         ->name('notifications.mark-read');
+    Route::post('/notifications/{notification}/mark-single-read', [App\Http\Controllers\DtrEditRequestController::class, 'markSingleAsRead'])
+        ->name('notifications.mark-single-read');
 
     Route::get('/supervisor/pending', [App\Http\Controllers\SupervisorController::class, 'pending'])
         ->name('supervisor.pending');

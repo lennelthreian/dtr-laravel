@@ -33,8 +33,8 @@ class IclockTransaction extends Model
 
     public function scopeForPeriod($query, $startDate, $endDate)
     {
-        return $query->whereDate('punch_time', '>=', $startDate)
-                     ->whereDate('punch_time', '<=', $endDate);
+        return $query->where('punch_time', '>=', $startDate . ' 00:00:00')
+                     ->where('punch_time', '<=', $endDate . ' 23:59:59');
     }
 
     public function scopeOrdered($query)

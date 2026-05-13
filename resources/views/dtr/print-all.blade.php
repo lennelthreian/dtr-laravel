@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All DTRs - {{ $monthName }} {{ $year }}</title>
+    <title>All DTRs - {{ $monthName }} {{ $year }} - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
@@ -15,6 +15,28 @@
         .employee-divider { page-break-before: always; }
         .no-print { display: block; }
         @media print {
+            [data-theme="dark"] {
+                --gray-50: #f8f9fa;
+                --gray-100: #f0f2f5;
+                --gray-200: #e9ecef;
+                --gray-300: #dee2e6;
+                --gray-400: #ced4da;
+                --gray-500: #adb5bd;
+                --gray-600: #6c757d;
+                --gray-700: #495057;
+                --gray-800: #343a40;
+                --gray-900: #212529;
+                --white: #ffffff;
+                --primary: #2d5a27;
+                --primary-light: #3d7a35;
+                --primary-dark: #1e401a;
+                --accent: #1a6b1a;
+                --accent-light: #228b22;
+                --danger: #c0392b;
+                --danger-light: #e74c3c;
+                --warning: #f39c12;
+                --warning-bg: #fff8e1;
+            }
             body { padding: 0; }
             .no-print { display: none !important; }
             .employee-divider { page-break-before: always; }
@@ -41,7 +63,7 @@
             $presentDays = 0; $totalMin = 0; $totalLate = 0; $totalUndertime = 0;
             foreach ($item['dtrData'] as $dayNum => $day) {
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
-                if ($day['has_punch'] && $dow <= 5) {
+                if ($day['has_punch'] && $dow <= $settings['max_dow']) {
                     $presentDays++;
                     if ($day['total_hours']) {
                         $parts = explode(':', $day['total_hours']);

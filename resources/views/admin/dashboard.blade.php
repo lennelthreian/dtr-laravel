@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - e-DTR Records</title>
+    <title>Admin Dashboard - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
@@ -11,8 +11,11 @@
     <div class="layout-sidebar">
         <div class="sidebar">
             <div class="sidebar-header">
+                @if (!empty($settings['logo_path']))
+                    <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
+                @endif
                 <h2>Admin Panel</h2>
-                <p>MBLISTTDA e-DTR System</p>
+                <p>{{ $settings['system_name'] ?? 'e-DTR System' }}</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('admin.dashboard') }}" class="active"><span>Dashboard</span></a>

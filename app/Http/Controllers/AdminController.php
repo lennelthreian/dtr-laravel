@@ -9,6 +9,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -153,24 +154,40 @@ class AdminController extends Controller
 
     public function settings()
     {
-        $order = ['agency_head_name', 'agency_head_position', 'agency_head_user_id', 'agency_name', 'am_start', 'am_end', 'pm_start', 'pm_end'];
-        $settings = DtrSetting::whereNotIn('setting_key', ['grace_period_minutes', 'office_name'])
+        $order = ['system_name', 'logo_path', 'agency_head_name', 'agency_head_position', 'agency_head_user_id', 'agency_name', 'four_day_work_week', 'am_start', 'am_start_flexi', 'am_end', 'pm_start', 'pm_end', 'pm_end_flexi', 'fdww_am_start', 'fdww_am_start_flexi', 'fdww_am_end', 'fdww_pm_start', 'fdww_pm_end', 'fdww_pm_end_flexi'];
+        $settingModels = DtrSetting::whereNotIn('setting_key', ['grace_period_minutes', 'office_name'])
             ->orderByRaw('FIELD(setting_key, "' . implode('","', $order) . '")')
             ->get();
         $users = User::orderBy('name')->get(['id', 'name', 'emp_code']);
-        return view('admin.settings', compact('settings', 'users'));
+        return view('admin.settings', compact('settingModels', 'users'));
     }
 
     public function updateSettings(Request $request)
     {
         $keys = DtrSetting::pluck('setting_key')->toArray();
         foreach ($keys as $key) {
+            if ($key === 'logo_path') {
+                continue;
+            }
             if ($request->has($key)) {
                 DtrSetting::where('setting_key', $key)->update([
                     'setting_value' => $request->input($key),
                 ]);
             }
         }
+
+        if ($request->hasFile('logo')) {
+            $old = DtrSetting::where('setting_key', 'logo_path')->value('setting_value');
+            if ($old) {
+                Storage::delete('public/' . $old);
+            }
+            $path = $request->file('logo')->store('public/logos');
+            $relativePath = str_replace('public/', '', $path);
+            DtrSetting::where('setting_key', 'logo_path')->update([
+                'setting_value' => $relativePath,
+            ]);
+        }
+
         return redirect()->route('admin.settings')->with('success', 'Settings updated.');
     }
 }

@@ -117,6 +117,15 @@ class DtrEditRequestController extends Controller
         return back();
     }
 
+    public function markSingleAsRead($id)
+    {
+        $notification = auth()->user()->notifications()->where('id', $id)->first();
+        if ($notification) {
+            $notification->markAsRead();
+        }
+        return response()->json(['success' => true]);
+    }
+
     private function notifySupervisors(DtrEditRequest $editRequest, DtrUser $employee)
     {
         $section = Section::find($employee->section_id);

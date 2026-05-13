@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>e-DTR - {{ $employee->full_name }} - {{ $monthName }} {{ $year }}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $employee->full_name }} - {{ $monthName }} {{ $year }} - {{ $settings['system_name'] ?? 'e-DTR Records' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
 <body>
-    @php
-        $_isSupervisor = auth()->user()->is_super;
-        if (!$_isSupervisor) {
-            $_dtrU = App\Models\DtrUser::where('emp_code', auth()->user()->emp_code)->first();
-            if ($_dtrU) {
-                $_isSupervisor = App\Models\Section::where('supervisor_id', $_dtrU->id)->exists()
-                    || App\Models\Office::where('supervisor_id', $_dtrU->id)->exists();
-            }
-        }
-    @endphp
+    @php $currentUser = auth()->user(); @endphp
 
     <div class="layout-sidebar">
         <div class="sidebar no-print">
             <div class="sidebar-header">
-                <h2>MBLISTTDA e-DTR System</h2>
-                <p>{{ auth()->user()->name }}</p>
+                @if (!empty($settings['logo_path']))
+                    <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
+                @endif
+                <h2>{{ $settings['system_name'] ?? 'e-DTR System' }}</h2>
+                <p>{{ $currentUser->name }}</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('dtr.index') }}" class="active">
                     <span>&#128196;</span> <span>e-DTR Records</span>
                 </a>
-                @if (auth()->user()->is_super || $_isSupervisor)
+                @if ($currentUser->is_super || $isSupervisor)
                     <a href="{{ route('supervisor.pending') }}">
                         <span>&#128276;</span> <span>Supervisor Panel</span>
                     </a>
                 @endif
-                @if (auth()->user()->is_super)
+                @if ($currentUser->is_super)
                     <a href="{{ route('admin.dashboard') }}">
                         <span>&#9881;</span> <span>Admin</span>
                     </a>
@@ -55,7 +50,12 @@
                     <h1 style="font-size:18px; color:var(--primary); margin:0;">{{ $employee->full_name }} &mdash; {{ $monthName }} {{ $year }}</h1>
                 </div>
                 <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>
-                @php $unread = auth()->user()->unreadNotifications; @endphp
+                @php $isFdww = ($settings['four_day_work_week'] ?? '0') === '1'; @endphp
+                <div class="ww-toggle-group">
+                    <button class="ww-toggle-btn{{ $isFdww ? '' : ' active' }}" onclick="toggleWorkWeek('0')">5-day WW</button>
+                    <button class="ww-toggle-btn{{ $isFdww ? ' active' : '' }}" onclick="toggleWorkWeek('1')">4-day WW</button>
+                </div>
+                @php $unread = $currentUser->unreadNotifications; @endphp
                 <div class="notif-pos">
                     <button class="notif-btn" onclick="toggleNotif()">&#128276;
                         @if ($unread->count() > 0)
@@ -422,6 +422,50 @@
                 d.classList.remove('active');
             }
         });
+        document.getElementById('notifDropdown') && document.getElementById('notifDropdown').addEventListener('click', function(e) {
+            var item = e.target.closest('.notif-item');
+            if (!item) return;
+            var notifId = item.getAttribute('data-notif-id');
+            if (notifId) {
+                e.preventDefault();
+                var url = item.getAttribute('href');
+                fetch('/notifications/' + notifId + '/mark-single-read', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                    }
+                }).then(function() {
+                    var badge = document.querySelector('.notif-badge');
+                    if (badge) {
+                        var count = parseInt(badge.textContent);
+                        count--;
+                        if (count <= 0) {
+                            badge.remove();
+                        } else {
+                            badge.textContent = count;
+                        }
+                    }
+                    item.remove();
+                    window.location.href = url;
+                }).catch(function() {
+                    window.location.href = url;
+                });
+            }
+        });
+        function toggleWorkWeek(val) {
+            fetch('{{ route("dtr.toggle-work-week") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ value: val })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            });
+        }
         function toggleTheme() {
             var html = document.documentElement;
             var isDark = html.getAttribute('data-theme') === 'dark';

@@ -48,6 +48,17 @@
             @enderror
         </div>
         <div class="form-group">
+            <label for="sex">Sex</label>
+            <select id="sex" name="sex" required class="form-control">
+                <option value="">-- Select Sex --</option>
+                <option value="Male" {{ old('sex') == 'Male' ? 'selected' : '' }}>Male</option>
+                <option value="Female" {{ old('sex') == 'Female' ? 'selected' : '' }}>Female</option>
+            </select>
+            @error('sex')
+                <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
+            @enderror
+        </div>
+        <div class="form-group">
             <label for="office">Office</label>
             <select id="office" name="office_id" required class="form-control">
                 <option value="">-- Select Office --</option>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Employees - e-DTR Records</title>
+    <title>Assign Employees - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
@@ -11,8 +11,11 @@
     <div class="layout-sidebar">
         <div class="sidebar">
             <div class="sidebar-header">
+                @if (!empty($settings['logo_path']))
+                    <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
+                @endif
                 <h2>Admin Panel</h2>
-                <p>MBLISTTDA e-DTR System</p>
+                <p>{{ $settings['system_name'] ?? 'e-DTR System' }}</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
@@ -40,7 +43,10 @@
             @endif
 
             <div class="card">
-                <h2>Employees ({{ $employees->count() }})</h2>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                    <h2 style="margin:0;">Employees ({{ $employees->count() }})</h2>
+                    <input type="text" id="empSearch" placeholder="Search by name or emp code..." style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:280px;outline:none;" oninput="filterEmployees(this.value)">
+                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -53,7 +59,7 @@
                                 <th class="text-center">Password</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="empTableBody">
                             @forelse ($employees as $employee)
                                 <tr>
                                     <td><strong>{{ $employee->full_name }}</strong></td>
@@ -164,6 +170,21 @@
         document.getElementById('assignModal').addEventListener('click', function(e) {
             if (e.target === this) closeAssign();
         });
+
+        function filterEmployees(query) {
+            var q = query.toLowerCase().trim();
+            var rows = document.querySelectorAll('#empTableBody tr');
+            var visibleCount = 0;
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                if (!q || text.indexOf(q) !== -1) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
     </script>
 </body>
 </html>

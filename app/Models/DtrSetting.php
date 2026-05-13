@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class DtrSetting extends Model
 {
@@ -13,6 +14,18 @@ class DtrSetting extends Model
 
     public static function getSettings(): array
     {
-        return self::pluck('setting_value', 'setting_key')->toArray();
+        return Cache::remember('dtr_settings', 60, function () {
+            return self::pluck('setting_value', 'setting_key')->toArray();
+        });
+    }
+
+    protected static function booted()
+    {
+        static::saved(function () {
+            Cache::forget('dtr_settings');
+        });
+        static::deleted(function () {
+            Cache::forget('dtr_settings');
+        });
     }
 }

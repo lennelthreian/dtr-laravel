@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Admin - e-DTR Records</title>
+    <title>Settings - Admin - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
@@ -11,8 +11,11 @@
     <div class="layout-sidebar">
         <div class="sidebar">
             <div class="sidebar-header">
+                @if (!empty($settings['logo_path']))
+                    <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
+                @endif
                 <h2>Admin Panel</h2>
-                <p>MBLISTTDA e-DTR System</p>
+                <p>{{ $settings['system_name'] ?? 'e-DTR System' }}</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
@@ -43,7 +46,7 @@
             @endif
 
             <div class="card">
-                <form method="POST" action="{{ route('admin.settings.update') }}">
+                <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data">
                     @csrf
                     <table class="table" style="max-width:600px;">
                         <thead>
@@ -53,15 +56,46 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($settings as $setting)
+                            @foreach ($settingModels as $setting)
                                 <tr>
                                     <td>
                                         <label for="{{ $setting->setting_key }}" style="font-weight:600; font-size:13px;">
-                                            {{ ucwords(str_replace('_', ' ', $setting->setting_key)) }}
+                                            @php
+                                                $label = str_replace('_', ' ', $setting->setting_key);
+                                                if ($setting->setting_key === 'four_day_work_week') {
+                                                    $label = '4-Day Work Week';
+                                                } elseif ($setting->setting_key === 'am_start_flexi') {
+                                                    $label = 'AM Start Flexi Time';
+                                                } elseif ($setting->setting_key === 'pm_end_flexi') {
+                                                    $label = 'PM End Flexi Time';
+                                                } elseif ($setting->setting_key === 'fdww_am_start') {
+                                                    $label = '4-Day AM Start';
+                                                } elseif ($setting->setting_key === 'fdww_am_end') {
+                                                    $label = '4-Day AM End';
+                                                } elseif ($setting->setting_key === 'fdww_pm_start') {
+                                                    $label = '4-Day PM Start';
+                                                } elseif ($setting->setting_key === 'fdww_pm_end') {
+                                                    $label = '4-Day PM End';
+                                                } elseif ($setting->setting_key === 'fdww_am_start_flexi') {
+                                                    $label = '4-Day AM Flexi Time';
+                                                } elseif ($setting->setting_key === 'fdww_pm_end_flexi') {
+                                                    $label = '4-Day PM Flexi Time';
+                                                } else {
+                                                    $label = ucwords($label);
+                                                }
+                                            @endphp
+                                            {{ $label }}
                                         </label>
                                     </td>
                                     <td>
-                                        @if ($setting->setting_key === 'agency_head_user_id')
+                                        @if ($setting->setting_key === 'four_day_work_week')
+                                            <select id="{{ $setting->setting_key }}"
+                                                    name="{{ $setting->setting_key }}"
+                                                    class="form-control" style="width:150px;">
+                                                <option value="0" {{ $setting->setting_value == '0' ? 'selected' : '' }}>Off (Mon-Fri)</option>
+                                                <option value="1" {{ $setting->setting_value == '1' ? 'selected' : '' }}>On (Mon-Thu)</option>
+                                            </select>
+                                        @elseif ($setting->setting_key === 'agency_head_user_id')
                                             <select id="{{ $setting->setting_key }}"
                                                     name="{{ $setting->setting_key }}"
                                                     class="form-control" style="width:100%;">
@@ -70,8 +104,33 @@
                                                     <option value="{{ $user->id }}" {{ $setting->setting_value == $user->id ? 'selected' : '' }}>
                                                         {{ $user->name }} ({{ $user->emp_code }})
                                                     </option>
-                                                @endforeach
+                            @endforeach
                                             </select>
+                                        @elseif ($setting->setting_key === 'logo_path')
+                                            <div style="display:flex;align-items:center;gap:12px;">
+                                                @if ($setting->setting_value)
+                                                    <img src="{{ asset('storage/' . $setting->setting_value) }}"
+                                                         alt="Logo" style="height:40px;border:1px solid var(--gray-300);border-radius:4px;padding:4px;background:#fff;">
+                                                @endif
+                                                <input type="file" id="{{ $setting->setting_key }}"
+                                                       name="logo"
+                                                       accept="image/*"
+                                                       class="form-control" style="width:100%;">
+                                            </div>
+                                        @elseif (str_ends_with($setting->setting_key, '_flexi'))
+                                            <div style="display:flex;align-items:center;gap:8px;">
+                                                <input type="number" id="{{ $setting->setting_key }}"
+                                                       name="{{ $setting->setting_key }}"
+                                                       value="{{ $setting->setting_value }}"
+                                                       min="0" max="120"
+                                                       class="form-control" style="width:100px;">
+                                                <span style="font-size:12px;color:var(--gray-500);">minutes</span>
+                                            </div>
+                                        @elseif ($setting->setting_key === 'system_name')
+                                            <input type="text" id="{{ $setting->setting_key }}"
+                                                   name="{{ $setting->setting_key }}"
+                                                   value="{{ $setting->setting_value }}"
+                                                   class="form-control" style="width:100%;font-size:15px;font-weight:600;">
                                         @else
                                             <input type="text" id="{{ $setting->setting_key }}"
                                                    name="{{ $setting->setting_key }}"

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supervisor Panel - Pending Requests</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Supervisor Panel - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
@@ -11,8 +12,12 @@
     <div class="layout-sidebar">
         <div class="sidebar">
             <div class="sidebar-header">
+                @php $currentUser = auth()->user(); @endphp
+                @if (!empty($settings['logo_path']))
+                    <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
+                @endif
                 <h2>Supervisor</h2>
-                <p>{{ auth()->user()->name }}</p>
+                <p>{{ $currentUser->name }}</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('supervisor.pending') }}" class="active">
@@ -25,7 +30,7 @@
                 <a href="{{ route('dtr.index') }}">
                     <span>&#128196;</span> <span>e-DTR Records</span>
                 </a>
-                @if (auth()->user()->is_super)
+                @if ($currentUser->is_super)
                     <a href="{{ route('admin.dashboard') }}">
                         <span>&#9881;</span> <span>Admin</span>
                     </a>
@@ -45,7 +50,12 @@
                 <div class="navbar-left">
                     <h1 style="font-size:20px; color:var(--primary); margin:0;">Pending Edit Requests</h1>
                 </div>
-                @php $unread = auth()->user()->unreadNotifications; @endphp
+                @php $isFdww = ($settings['four_day_work_week'] ?? '0') === '1'; @endphp
+                <div class="ww-toggle-group">
+                    <button class="ww-toggle-btn{{ $isFdww ? '' : ' active' }}" onclick="toggleWorkWeek('0')">5-day WW</button>
+                    <button class="ww-toggle-btn{{ $isFdww ? ' active' : '' }}" onclick="toggleWorkWeek('1')">4-day WW</button>
+                </div>
+                @php $unread = $currentUser->unreadNotifications; @endphp
                 <div class="notif-pos">
                     <button class="notif-btn" onclick="toggleNotif()">&#128276;
                         @if ($unread->count() > 0)
@@ -224,6 +234,50 @@
                 d.classList.remove('active');
             }
         });
+        document.getElementById('notifDropdown') && document.getElementById('notifDropdown').addEventListener('click', function(e) {
+            var item = e.target.closest('.notif-item');
+            if (!item) return;
+            var notifId = item.getAttribute('data-notif-id');
+            if (notifId) {
+                e.preventDefault();
+                var url = item.getAttribute('href');
+                fetch('/notifications/' + notifId + '/mark-single-read', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                    }
+                }).then(function() {
+                    var badge = document.querySelector('.notif-badge');
+                    if (badge) {
+                        var count = parseInt(badge.textContent);
+                        count--;
+                        if (count <= 0) {
+                            badge.remove();
+                        } else {
+                            badge.textContent = count;
+                        }
+                    }
+                    item.remove();
+                    window.location.href = url;
+                }).catch(function() {
+                    window.location.href = url;
+                });
+            }
+        });
+        function toggleWorkWeek(val) {
+            fetch('{{ route("dtr.toggle-work-week") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ value: val })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            });
+        }
         function toggleTheme() {
             var html = document.documentElement;
             var isDark = html.getAttribute('data-theme') === 'dark';
