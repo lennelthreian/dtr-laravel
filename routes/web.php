@@ -42,6 +42,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/dtr/toggle-work-week', [App\Http\Controllers\DtrController::class, 'toggleWorkWeek'])
         ->name('dtr.toggle-work-week');
+    Route::post('/dtr/toggle-day-work-week', [App\Http\Controllers\DtrController::class, 'toggleDayWorkWeek'])
+        ->name('dtr.toggle-day-work-week');
 
     Route::post('/notifications/mark-read', [App\Http\Controllers\DtrEditRequestController::class, 'markAsRead'])
         ->name('notifications.mark-read');
@@ -85,4 +87,16 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('settings');
     Route::post('/settings', [App\Http\Controllers\AdminController::class, 'updateSettings'])
         ->name('settings.update');
+    Route::get('/holidays', [App\Http\Controllers\AdminController::class, 'holidays'])
+        ->name('holidays');
+    Route::post('/holidays', [App\Http\Controllers\AdminController::class, 'storeHoliday'])
+        ->name('holidays.store');
+    Route::delete('/holidays/{holiday}', [App\Http\Controllers\AdminController::class, 'deleteHoliday'])
+        ->name('holidays.delete');
+    Route::get('/work-arrangement', [App\Http\Controllers\AdminController::class, 'workArrangement'])
+        ->name('work-arrangement');
+    Route::post('/work-arrangement/global', [App\Http\Controllers\AdminController::class, 'updateGlobalWorkWeek'])
+        ->name('work-arrangement.global');
+    Route::post('/work-arrangement/employee/{employee}', [App\Http\Controllers\AdminController::class, 'updateEmployeeWorkWeek'])
+        ->name('work-arrangement.employee');
 });

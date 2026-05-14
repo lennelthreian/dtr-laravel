@@ -22,6 +22,8 @@
                 <a href="{{ route('admin.offices') }}" class="active"><span>Manage Divisions</span></a>
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
+                <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
             </nav>
             <div class="sidebar-footer">
@@ -32,7 +34,7 @@
         <div class="main-content">
             <div class="admin-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
                 <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Manage Divisions</h1>
-                <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                <form method="POST" action="{{ route('logout') }}" class="logout-corner">
                     @csrf
                     <button class="btn btn-outline btn-sm">Logout</button>
                 </form>

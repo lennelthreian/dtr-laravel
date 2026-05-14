@@ -37,10 +37,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%;">Logout</button>
-                </form>
+
             </div>
         </div>
 
@@ -50,11 +47,6 @@
                     <h1 style="font-size:18px; color:var(--primary); margin:0;">{{ $employee->full_name }} &mdash; {{ $monthName }} {{ $year }}</h1>
                 </div>
                 <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>
-                @php $isFdww = ($settings['four_day_work_week'] ?? '0') === '1'; @endphp
-                <div class="ww-toggle-group">
-                    <button class="ww-toggle-btn{{ $isFdww ? '' : ' active' }}" onclick="toggleWorkWeek('0')">5-day WW</button>
-                    <button class="ww-toggle-btn{{ $isFdww ? ' active' : '' }}" onclick="toggleWorkWeek('1')">4-day WW</button>
-                </div>
                 @php $unread = $currentUser->unreadNotifications; @endphp
                 <div class="notif-pos">
                     <button class="notif-btn" onclick="toggleNotif()">&#128276;
@@ -92,6 +84,10 @@
                         @endif
                     </div>
                 </div>
+                <form method="POST" action="{{ route('logout') }}" class="logout-corner">
+                    @csrf
+                    <button class="btn btn-outline btn-sm">Logout</button>
+                </form>
                 <form method="get" action="{{ route('dtr.show') }}" class="inline-form" style="display:inline-flex; align-items:center; gap:4px;">
                     <input type="hidden" name="emp" value="{{ $employee->emp_code }}">
                     <select name="month" onchange="this.form.submit()" style="padding:6px 10px; border:1.5px solid var(--gray-300); border-radius:4px; font-size:13px; background:var(--white);">
@@ -146,9 +142,12 @@
                                                 'halfday_am' => 'Halfday (AM)',
                                                 'halfday_pm' => 'Halfday (PM)',
                                                 'holiday' => 'Holiday',
+                                                'on_leave' => 'On Leave',
                                                 'wfh' => 'WFH',
                                                 'special_order' => 'Special Order',
                                                 'travel_order' => 'Travel Order',
+                                                'work_suspension' => 'Work Suspension',
+                                                'locator_slip' => 'Locator Slip',
                                             ];
                                             $details = '';
                                             if ($req->type === 'time_correction') {
@@ -156,6 +155,12 @@
                                             } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
                                                 $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
                                                 $details = $label . ': ' . $req->new_value;
+                                            } elseif ($req->type === 'on_leave' && $req->new_value) {
+                                                $details = 'On Leave (' . $req->new_value . ' hrs)';
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'locator_slip']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                                $details = $typeLabels[$req->type] ?? $req->type;
+                                                if ($req->new_value === 'am') $details .= ' (AM)';
+                                                elseif ($req->new_value === 'pm') $details .= ' (PM)';
                                             } else {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                             }
@@ -207,9 +212,12 @@
                                                 'halfday_am' => 'Halfday (AM)',
                                                 'halfday_pm' => 'Halfday (PM)',
                                                 'holiday' => 'Holiday',
+                                                'on_leave' => 'On Leave',
                                                 'wfh' => 'WFH',
                                                 'special_order' => 'Special Order',
                                                 'travel_order' => 'Travel Order',
+                                                'work_suspension' => 'Work Suspension',
+                                                'locator_slip' => 'Locator Slip',
                                             ];
                                             $details = '';
                                             if ($req->type === 'time_correction') {
@@ -217,6 +225,12 @@
                                             } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
                                                 $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
                                                 $details = $label . ': ' . $req->new_value;
+                                            } elseif ($req->type === 'on_leave' && $req->new_value) {
+                                                $details = 'On Leave (' . $req->new_value . ' hrs)';
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'locator_slip']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                                $details = $typeLabels[$req->type] ?? $req->type;
+                                                if ($req->new_value === 'am') $details .= ' (AM)';
+                                                elseif ($req->new_value === 'pm') $details .= ' (PM)';
                                             } else {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                             }
@@ -262,12 +276,11 @@
                     <select name="type" id="modal_type" required class="form-control" onchange="toggleEditFields()">
                         <option value="time_correction">Time Correction</option>
                         <option value="absent">Absent</option>
-                        <option value="halfday_am">Halfday Absent (AM)</option>
-                        <option value="halfday_pm">Halfday Absent (PM)</option>
-                        <option value="holiday">Holiday</option>
+                        <option value="on_leave">On Leave</option>
                         <option value="wfh">Work From Home (WFH)</option>
                         <option value="special_order">Special Order</option>
                         <option value="travel_order">Travel Order</option>
+                        <option value="locator_slip">Locator Slip</option>
                     </select>
                 </div>
 
@@ -291,14 +304,21 @@
                     </div>
                 </div>
 
-                <div id="halfdayFields" style="display:none;">
-                    <div class="form-group">
-                        <label for="modal_halfday_time" id="halfdayTimeLabel">Time</label>
-                        <input type="text" name="new_value" id="modal_halfday_time" placeholder="e.g. 10:00" class="form-control">
-                    </div>
-                </div>
-
                 <div id="soFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Special Order Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="so_type" value="whole_day" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="so_type" value="am"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="so_type" value="pm"> PM
+                            </label>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label for="modal_so_number">Special Order No.</label>
                         <input type="text" name="so_number" id="modal_so_number" placeholder="e.g. SO-2024-001" class="form-control">
@@ -307,8 +327,35 @@
 
                 <div id="toFields" style="display:none;">
                     <div class="form-group">
+                        <label>Travel Order Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="to_type" value="whole_day" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="to_type" value="am"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="to_type" value="pm"> PM
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="modal_to_number">Travel Order No.</label>
                         <input type="text" name="to_number" id="modal_to_number" placeholder="e.g. TO-2024-001" class="form-control">
+                    </div>
+                </div>
+
+                <div id="dateRangeFields" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modal_from_date">From Date</label>
+                            <input type="date" name="from_date" id="modal_from_date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="modal_to_date">To Date</label>
+                            <input type="date" name="to_date" id="modal_to_date" class="form-control">
+                        </div>
                     </div>
                 </div>
 
@@ -329,8 +376,53 @@
                     </div>
                 </div>
 
+                <div id="wfhFields" style="display:none;">
+                    <div class="form-group">
+                        <label>WFH Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="wfh_type" value="whole_day" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="wfh_type" value="am"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="wfh_type" value="pm"> PM
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="onLeaveFields" style="display:none;">
+                    <div class="form-group">
+                        <label for="modal_leave_hours">Leave Hours</label>
+                        <input type="number" name="leave_hours" id="modal_leave_hours" min="0.5" max="24" step="0.5" placeholder="e.g. 8" class="form-control" style="width:140px;">
+                    </div>
+                </div>
+
+                <div id="locatorSlipFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Locator Slip Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ls_type" value="whole_day" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ls_type" value="am"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ls_type" value="pm"> PM
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_ls_number">Locator Slip No.</label>
+                        <input type="text" name="ls_number" id="modal_ls_number" placeholder="e.g. LS-2024-001" class="form-control">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label for="modal_reason">Reason</label>
+                    <label for="modal_reason" id="modalReasonLabel">Reason</label>
                     <textarea name="reason" id="modal_reason" required rows="3" placeholder="Explain why" class="form-control"></textarea>
                 </div>
 
@@ -347,6 +439,8 @@
             var dateStr = ('{{ $year }}' + '-' + String('{{ $month }}').padStart(2, '0') + '-' + String(day).padStart(2, '0'));
             document.getElementById('modal_target_date').value = dateStr;
             document.getElementById('modalDayLabel').textContent = 'Day ' + day + ' (' + dateStr + ')';
+            document.getElementById('modal_from_date').value = dateStr;
+            document.getElementById('modal_to_date').value = dateStr;
             document.getElementById('modal_type').value = 'time_correction';
 
             var fieldSelect = document.getElementById('modal_field');
@@ -364,11 +458,16 @@
             toggleEditFields();
             document.getElementById('editRequestModal').classList.add('active');
             newValueInput.value = '';
-            document.getElementById('modal_halfday_time').value = '';
             document.getElementById('modal_so_number').value = '';
             document.getElementById('modal_to_number').value = '';
             document.getElementById('modal_reason').value = '';
             document.querySelector('input[name="absent_type"][value="whole_day"]').checked = true;
+            document.querySelector('input[name="wfh_type"][value="whole_day"]').checked = true;
+            document.querySelector('input[name="so_type"][value="whole_day"]').checked = true;
+            document.querySelector('input[name="to_type"][value="whole_day"]').checked = true;
+            document.querySelector('input[name="ls_type"][value="whole_day"]').checked = true;
+            document.getElementById('modal_ls_number').value = '';
+            document.getElementById('modal_leave_hours').value = '';
         }
 
         function closeEditRequest() {
@@ -378,52 +477,63 @@
         function toggleEditFields() {
             var type = document.getElementById('modal_type').value;
             var tcFields = document.getElementById('timeCorrectionFields');
-            var hdFields = document.getElementById('halfdayFields');
             var soFields = document.getElementById('soFields');
             var toFields = document.getElementById('toFields');
             var absentFields = document.getElementById('absentFields');
+            var wfhFields = document.getElementById('wfhFields');
+            var onLeaveFields = document.getElementById('onLeaveFields');
+            var locatorSlipFields = document.getElementById('locatorSlipFields');
+            var dateRangeFields = document.getElementById('dateRangeFields');
+            var modalDayLabel = document.getElementById('modalDayLabel');
             var fieldSelect = document.getElementById('modal_field');
             var newValueInput = document.getElementById('modal_new_value');
-            var halfdayTime = document.getElementById('modal_halfday_time');
-            var halfdayLabel = document.getElementById('halfdayTimeLabel');
+            var reasonLabel = document.getElementById('modalReasonLabel');
+            var reasonInput = document.getElementById('modal_reason');
 
             tcFields.style.display = 'none';
-            hdFields.style.display = 'none';
             soFields.style.display = 'none';
             toFields.style.display = 'none';
             absentFields.style.display = 'none';
+            wfhFields.style.display = 'none';
+            onLeaveFields.style.display = 'none';
+            locatorSlipFields.style.display = 'none';
+            dateRangeFields.style.display = 'none';
+            modalDayLabel.style.display = 'block';
+            reasonLabel.textContent = 'Reason';
+            reasonInput.placeholder = 'Explain why';
             fieldSelect.required = false;
             newValueInput.required = false;
-            halfdayTime.required = false;
-            halfdayTime.disabled = true;
             newValueInput.disabled = false;
 
             if (type === 'time_correction') {
                 tcFields.style.display = 'block';
                 fieldSelect.required = true;
                 newValueInput.required = true;
-            } else if (type === 'halfday_am') {
-                hdFields.style.display = 'block';
-                halfdayLabel.textContent = 'Time out (AM departure)';
-                fieldSelect.value = 'am_out';
-                halfdayTime.required = false;
-                halfdayTime.disabled = false;
-                halfdayTime.placeholder = 'e.g. 10:00';
-            } else if (type === 'halfday_pm') {
-                hdFields.style.display = 'block';
-                halfdayLabel.textContent = 'Time in (PM arrival)';
-                fieldSelect.value = 'pm_in';
-                halfdayTime.required = false;
-                halfdayTime.disabled = false;
-                halfdayTime.placeholder = 'e.g. 14:00';
             } else if (type === 'absent') {
                 absentFields.style.display = 'block';
+            } else if (type === 'wfh') {
+                wfhFields.style.display = 'block';
             } else if (type === 'special_order') {
                 soFields.style.display = 'block';
+                dateRangeFields.style.display = 'block';
+                modalDayLabel.style.display = 'none';
+                reasonLabel.textContent = 'Title of Activity';
+                reasonInput.placeholder = 'Enter the title of activity';
                 document.getElementById('modal_so_number').required = true;
             } else if (type === 'travel_order') {
                 toFields.style.display = 'block';
+                dateRangeFields.style.display = 'block';
+                modalDayLabel.style.display = 'none';
+                reasonLabel.textContent = 'Title of Activity';
+                reasonInput.placeholder = 'Enter the title of activity';
                 document.getElementById('modal_to_number').required = true;
+            } else if (type === 'on_leave') {
+                onLeaveFields.style.display = 'block';
+            } else if (type === 'locator_slip') {
+                locatorSlipFields.style.display = 'block';
+                reasonLabel.textContent = 'Title of Activity';
+                reasonInput.placeholder = 'Enter the title of activity';
+                document.getElementById('modal_ls_number').required = true;
             }
         }
 
@@ -441,6 +551,20 @@
         function toggleNotif() {
             var d = document.getElementById('notifDropdown');
             d.classList.toggle('active');
+            if (d.classList.contains('active')) {
+                var badge = document.querySelector('.notif-badge');
+                if (badge) {
+                    fetch('{{ route("notifications.mark-read") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                        }
+                    }).then(function() {
+                        badge.remove();
+                    });
+                }
+            }
         }
         document.addEventListener('click', function(e) {
             var d = document.getElementById('notifDropdown');
@@ -488,6 +612,19 @@
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({ value: val })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            });
+        }
+        function toggleDayWorkWeek(dateStr, newType) {
+            fetch('{{ route("dtr.toggle-day-work-week") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ target_date: dateStr, work_week_type: newType })
             }).then(function(r) { return r.json(); }).then(function(data) {
                 if (data.success) location.reload();
             });

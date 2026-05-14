@@ -1,33 +1,34 @@
-<div style="font-family:Arial, sans-serif; font-style:italic; font-size:9px; margin-bottom:4px; text-align:left;">Civil Service Form No. 48</div>
+<div style="font-family:Arial, sans-serif; font-style:italic; font-size:11px; margin-bottom:6px; text-align:left;">Civil Service Form No. 48</div>
 <table class="dtr-header-table">
     <tr>
         <td colspan="2" style="text-align:center;">
-            <h1 style="font-size:13px; letter-spacing:1px; margin:0 0 4px; border-bottom:1px solid #000; display:inline-block; padding-bottom:2px;">DAILY TIME RECORD</h1>
+            <h1 style="font-size:16px; letter-spacing:1px; margin:0 0 6px; border-bottom:1px solid #000; display:inline-block; padding-bottom:3px;">DAILY TIME RECORD</h1>
         </td>
     </tr>
     <tr>
-        <td colspan="2" style="text-align:center; padding:2px 0;">
-            <h1 style="font-size:14px; margin:0; text-decoration:underline; font-weight:700;">{{ $employee->full_name }}</h1>
-            <div style="font-size:8px; margin-top:1px; color:var(--gray-600);">(Name)</div>
+        <td colspan="2" style="text-align:center; padding:4px 0;">
+            <h1 style="font-size:17px; margin:0; text-decoration:underline; font-weight:700;">{{ $employee->full_name }}</h1>
+            <div style="font-size:10px; margin-top:2px; color:var(--gray-600);">(Name)</div>
         </td>
     </tr>
     <tr>
         <td colspan="2" class="dtr-header-right" style="text-align:left;">
-            <h2 style="font-size:12px; margin:2px 0 0; text-align:center; font-weight:400;">For the month of <u>{{ $monthName }} {{ $year }}</u></h2>
+            <h2 style="font-size:14px; margin:4px 0 0; text-align:center; font-weight:400;">For the month of <u>{{ $monthName }} {{ $year }}</u></h2>
         </td>
     </tr>
 </table>
 
 @php
-    $maxDow = $settings['max_dow'] ?? (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : 5);
+    $empMaxDow = $employee->default_work_week === '4-day' ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5));
     $totalWeekdays = 0; $presentWeekdays = 0; $totalSaturdays = 0; $presentSaturdays = 0;
     for ($d = 1; $d <= $daysInMonth; $d++) {
         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
-        if ($dow <= $maxDow) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentWeekdays++; }
+        $dayMaxDow = (isset($dtrData[$d]['work_week_type']) ? ($dtrData[$d]['work_week_type'] === '4-day' ? 4 : 5) : $empMaxDow);
+        if ($dow <= $dayMaxDow) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentWeekdays++; }
         if ($dow == 6) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentSaturdays++; }
     }
 @endphp
-<div style="display:flex; justify-content:space-between; font-size:9px; margin:4px 0; font-style:italic;">
+<div style="display:flex; justify-content:space-between; font-size:11px; margin:6px 0; font-style:italic;">
     <div>Official hours for<br>arrival and departure</div>
     <div style="text-align:right;">Regular days ({{ $totalWeekdays }})<br>Saturdays ({{ $totalSaturdays }})</div>
 </div>
@@ -58,17 +59,25 @@
                 $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
                 $dayOfWeek = date('l', strtotime($dateStr));
                 $dowN = date('N', strtotime($dateStr));
-                $isNonWorkingDay = $dowN > $maxDow || in_array($dayOfWeek, ['Saturday', 'Sunday']);
+                $isNonWorkingDay = $dowN > $empMaxDow || in_array($dayOfWeek, ['Saturday', 'Sunday']);
                 $hasData = isset($dtrData[$d]) && $dtrData[$d]['has_punch'];
             @endphp
             @php
                 $edited = isset($dtrData[$d]['is_edited']) && $dtrData[$d]['is_edited'];
                 $rowClass = trim(($isNonWorkingDay && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : '') . ($edited ? 'edited' : ''));
             @endphp
+            @php
+                $dayWW = $dtrData[$d]['work_week_type'] ?? $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
+            @endphp
             <tr class="{{ $rowClass }}">
                 <td class="day-col">
                     {{ $d }}
                     <span class="dow">{{ substr($dayOfWeek, 0, 3) }}</span>
+                    @if (isset($isOwnDtr) && $isOwnDtr)
+                        <span class="ww-badge ww-clickable no-print" onclick="toggleDayWorkWeek('{{ $dateStr }}', '{{ $dayWW === '4-day' ? '5-day' : '4-day' }}')">{{ $dayWW === '4-day' ? '4d' : '5d' }}</span>
+                    @elseif (isset($dtrData[$d]['work_week_type']))
+                        <span class="ww-badge no-print">{{ $dayWW === '4-day' ? '4d' : '5d' }}</span>
+                    @endif
                 </td>
                 @if (!empty($dtrData[$d]['so_number']))
                     <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
@@ -107,9 +116,6 @@
                     <td class="hours-col">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">
                         {{ $dtrData[$d]['remarks'] }}
-                        @if ($edited)
-                            <span class="edited-badge">edited</span>
-                        @endif
                     </td>
                 @else
                     <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
@@ -150,21 +156,27 @@
         @if ($totalLate > 0) Late: {{ $totalLateFormatted }} @endif
         @if ($totalUndertime > 0){{ $totalLate > 0 ? ' | ' : '' }} UT: {{ $totalUndertimeFormatted }} @endif
         &nbsp;|&nbsp;
-        {{ ($settings['four_day_work_week'] ?? '0') === '1' ? '4-Day' : '5-Day' }}
-        AM {{ $settings['am_start'] ?? '08:00' }}-{{ $settings['am_end'] ?? '12:00' }}
-        PM {{ $settings['pm_start'] ?? '13:00' }}-{{ $settings['pm_end'] ?? '17:00' }}
+        @php $ww = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-Day' : '5-Day'); @endphp
+        {{ $ww }}
+        @if ($ww === '4-Day')
+            AM {{ $settings['fdww_am_start'] ?? '07:00' }}-{{ $settings['fdww_am_end'] ?? '12:00' }}
+            PM {{ $settings['fdww_pm_start'] ?? '13:00' }}-{{ $settings['fdww_pm_end'] ?? '19:00' }}
+        @else
+            AM 07:00-{{ $settings['original_am_end'] ?? '12:00' }}
+            PM {{ $settings['original_pm_start'] ?? '13:00' }}-{{ $settings['original_pm_end'] ?? '17:00' }}
+        @endif
     </div>
 </div>
 
-<div style="text-align:left; font-style:italic; font-size:9px; margin:8px 0;">
+<div style="text-align:left; font-style:italic; font-size:11px; margin:10px 0;">
     I certify on my honor that the above is a true and correct report<br>
     of the hours of work performed, record of which was made daily<br>
     at the time of arrival and departure from office.
 </div>
-<div style="text-align:center; font-size:10px; margin:24px 0 4px;">
+<div style="text-align:center; font-size:13px; margin:28px 0 6px;">
     <strong><u>{{ $employee->full_name }}</u></strong>
 </div>
-<div style="text-align:left; font-style:italic; font-size:9px; margin-bottom:20px;">VERIFIED as to the prescribed office hours:</div>
+<div style="text-align:left; font-style:italic; font-size:11px; margin-bottom:24px;">VERIFIED as to the prescribed office hours:</div>
 @php
     $isEmployeeOfficeSupervisor = \App\Models\Office::where('supervisor_id', $employee->id)->exists();
 @endphp
@@ -173,9 +185,9 @@
         $seniorManager = $employee->officeModel && $employee->officeModel->seniorManager ? $employee->officeModel->seniorManager : null;
     @endphp
     @if ($seniorManager)
-    <div style="text-align:center; font-size:10px; margin-top:24px;">
+    <div style="text-align:center; font-size:12px; margin-top:28px;">
         <strong><u>{{ $seniorManager->full_name }}</u></strong><br>
-        <span style="font-size:9px;">{{ $seniorManager->position ?: 'Senior Manager' }}</span>
+        <span style="font-size:11px;">{{ $seniorManager->position ?: 'Senior Manager' }}</span>
     </div>
     @endif
 @else
@@ -183,9 +195,9 @@
         $officeSupervisor = $employee->officeModel && $employee->officeModel->supervisor ? $employee->officeModel->supervisor : null;
     @endphp
     @if ($officeSupervisor)
-    <div style="text-align:center; font-size:10px; margin-top:24px;">
+    <div style="text-align:center; font-size:12px; margin-top:28px;">
         <strong><u>{{ $officeSupervisor->full_name }}</u></strong><br>
-        <span style="font-size:9px;">{{ $officeSupervisor->position ?: 'Division Supervisor' }}</span>
+        <span style="font-size:11px;">{{ $officeSupervisor->position ?: 'Division Supervisor' }}</span>
     </div>
     @endif
 @endif

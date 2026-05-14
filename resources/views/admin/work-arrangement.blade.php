@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Employees - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
+    <title>Work Arrangement - {{ $settings['system_name'] ?? 'e-DTR System' }}</title>
     <link rel="stylesheet" href="{{ asset('dtr.css') }}">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
@@ -21,9 +21,9 @@
                 <a href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
                 <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
-                <a href="{{ route('admin.employees') }}" class="active"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
-                <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
+                <a href="{{ route('admin.work-arrangement') }}" class="active"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
             </nav>
             <div class="sidebar-footer">
@@ -33,7 +33,7 @@
         </div>
         <div class="main-content">
             <div class="admin-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-                <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Assign Employees</h1>
+                <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Work Arrangement</h1>
                 <form method="POST" action="{{ route('logout') }}" class="logout-corner">
                     @csrf
                     <button class="btn btn-outline btn-sm">Logout</button>
@@ -44,9 +44,23 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
+            <div class="card" style="margin-bottom:20px;">
+                <h2>Global Default</h2>
+                <form method="POST" action="{{ route('admin.work-arrangement.global') }}" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    @csrf
+                    <span style="font-size:14px;font-weight:600;color:var(--gray-700);">System-wide work week:</span>
+                    <select name="value" class="form-control" style="width:200px;">
+                        <option value="0" {{ ($globalSetting->setting_value ?? '0') === '0' ? 'selected' : '' }}>5-day (Mon-Fri)</option>
+                        <option value="1" {{ ($globalSetting->setting_value ?? '0') === '1' ? 'selected' : '' }}>4-day</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Save Global Default</button>
+                </form>
+                <p style="font-size:12px;color:var(--gray-500);margin-top:8px;">This sets the default for all employees. Individual overrides below take precedence.</p>
+            </div>
+
             <div class="card">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-                    <h2 style="margin:0;">Employees ({{ $employees->count() }})</h2>
+                    <h2 style="margin:0;">Employee Overrides ({{ $employees->count() }})</h2>
                     <input type="text" id="empSearch" placeholder="Search by name or emp code..." style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:280px;outline:none;" oninput="filterEmployees(this.value)">
                 </div>
                 <div class="table-wrap">
@@ -55,10 +69,9 @@
                             <tr>
                                 <th>Employee</th>
                                 <th>Emp Code</th>
-                                <th>Current Office</th>
-                                <th>Current Section</th>
-                                <th class="text-center">Assign</th>
-                                <th class="text-center">Password</th>
+                                <th>Office</th>
+                                <th>Current Arrangement</th>
+                                <th class="text-center">Change To</th>
                             </tr>
                         </thead>
                         <tbody id="empTableBody">
@@ -67,19 +80,29 @@
                                     <td><strong>{{ $employee->full_name }}</strong></td>
                                     <td>{{ $employee->emp_code }}</td>
                                     <td>{{ $employee->office ?: '&mdash;' }}</td>
-                                    <td>{{ $employee->section ?: '&mdash;' }}</td>
-                                    <td class="text-center">
-                                        <button class="btn btn-outline btn-sm" onclick="showAssign({{ $employee->id }}, '{{ $employee->full_name }}', {{ $employee->office_id ?? 'null' }}, {{ $employee->section_id ?? 'null' }})">Assign</button>
+                                    <td>
+                                        @if ($employee->default_work_week === '4-day')
+                                            <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:#dbeafe;color:#1e40af;">4-day</span>
+                                        @elseif ($employee->default_work_week === '5-day')
+                                            <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;">5-day</span>
+                                        @else
+                                            <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:#f0f2f5;color:#6c757d;">Default</span>
+                                            <span style="font-size:11px;color:var(--gray-500);">(inherits global)</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
-                                        <form method="POST" action="{{ route('admin.employees.reset-password', $employee) }}" onsubmit="return confirm('Reset password for {{ $employee->full_name }} to &quot;password&quot;?')">
+                                        <form method="POST" action="{{ route('admin.work-arrangement.employee', $employee) }}" style="display:inline">
                                             @csrf
-                                            <button class="btn btn-outline btn-sm">Reset</button>
+                                            <select name="default_work_week" class="form-control" style="width:110px;display:inline;" onchange="this.form.submit()">
+                                                <option value="default" {{ $employee->default_work_week === null ? 'selected' : '' }}>Default</option>
+                                                <option value="5-day" {{ $employee->default_work_week === '5-day' ? 'selected' : '' }}>5-day</option>
+                                                <option value="4-day" {{ $employee->default_work_week === '4-day' ? 'selected' : '' }}>4-day</option>
+                                            </select>
                                         </form>
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No employees.</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No employees.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -87,36 +110,6 @@
             </div>
         </div>
     </div>
-
-    <div id="assignModal" class="modal-overlay">
-        <div class="modal-box">
-            <h2>Assign Employee</h2>
-            <p class="modal-sub" id="modalEmployeeName"></p>
-            <form method="POST" id="assignForm">
-                @csrf
-                <div class="form-group">
-                    <label for="modal_office_id">Office</label>
-                    <select name="office_id" id="modal_office_id" class="form-control" onchange="updateSections()">
-                        <option value="">&mdash; None &mdash;</option>
-                        @foreach ($offices as $office)
-                            <option value="{{ $office->id }}">{{ $office->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="modal_section_id">Section</label>
-                    <select name="section_id" id="modal_section_id" class="form-control">
-                        <option value="">&mdash; None &mdash;</option>
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-outline" onclick="closeAssign()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
         function toggleTheme() {
             var html = document.documentElement;
@@ -135,56 +128,13 @@
             var btn = document.getElementById('themeToggle');
             if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
         })();
-        const offices = @json($offices);
-
-        function showAssign(id, name, officeId, sectionId) {
-            document.getElementById('modalEmployeeName').textContent = name;
-            document.getElementById('assignForm').action = '{{ url('/admin/employees') }}/' + id + '/assign';
-            document.getElementById('modal_office_id').value = officeId || '';
-            updateSections(function() {
-                document.getElementById('modal_section_id').value = sectionId || '';
-            });
-            document.getElementById('assignModal').classList.add('active');
-        }
-
-        function closeAssign() {
-            document.getElementById('assignModal').classList.remove('active');
-        }
-
-        function updateSections(callback) {
-            const officeId = document.getElementById('modal_office_id').value;
-            const sectionSelect = document.getElementById('modal_section_id');
-            sectionSelect.innerHTML = '<option value="">&mdash; None &mdash;</option>';
-            if (officeId) {
-                const office = offices.find(o => o.id == officeId);
-                if (office && office.sections) {
-                    office.sections.forEach(function(s) {
-                        const opt = document.createElement('option');
-                        opt.value = s.id;
-                        opt.textContent = s.name;
-                        sectionSelect.appendChild(opt);
-                    });
-                }
-            }
-            if (callback) callback();
-        }
-
-        document.getElementById('assignModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAssign();
-        });
 
         function filterEmployees(query) {
             var q = query.toLowerCase().trim();
             var rows = document.querySelectorAll('#empTableBody tr');
-            var visibleCount = 0;
             rows.forEach(function(row) {
                 var text = row.textContent.toLowerCase();
-                if (!q || text.indexOf(q) !== -1) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
             });
         }
     </script>

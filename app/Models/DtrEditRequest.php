@@ -33,14 +33,16 @@ class DtrEditRequest extends Model
 
     public function scopeForEmployee($query, $empCode)
     {
-        return $query->whereHas('employee', function ($q) use ($empCode) {
-            $q->where('emp_code', $empCode);
-        });
+        $employeeId = DtrUser::where('emp_code', $empCode)->value('id');
+        return $employeeId ? $query->where('employee_id', $employeeId) : $query->whereRaw('0=1');
     }
 
     public function scopeForPeriod($query, $year, $month)
     {
-        return $query->whereYear('target_date', $year)->whereMonth('target_date', $month);
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $start = sprintf('%04d-%02d-01', $year, $month);
+        $end = sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth);
+        return $query->whereBetween('target_date', [$start, $end]);
     }
 
     public function scopeApproved($query)

@@ -23,57 +23,112 @@ class DtrEditRequestController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => 'required|in:time_correction,absent,halfday_am,halfday_pm,holiday,wfh,special_order,travel_order',
-            'target_date' => 'required|date',
+            'type' => 'required|in:time_correction,absent,holiday,wfh,special_order,travel_order,work_suspension,locator_slip,on_leave',
+            'target_date' => 'nullable|date',
+            'from_date' => 'nullable|date',
+            'to_date' => 'nullable|date',
             'field' => 'nullable|in:am_in,am_out,pm_in,pm_out',
             'old_value' => 'nullable|string|max:10',
             'new_value' => 'nullable|string|max:10',
             'reason' => 'required|string|max:500',
+            'wfh_type' => 'nullable|in:whole_day,am,pm',
+            'so_type' => 'nullable|in:whole_day,am,pm',
+            'to_type' => 'nullable|in:whole_day,am,pm',
+            'ws_type' => 'nullable|in:whole_day,am,pm',
+            'ls_type' => 'nullable|in:whole_day,am,pm',
+            'ls_number' => 'nullable|string|max:100',
+            'so_number' => 'nullable|string|max:100',
+            'to_number' => 'nullable|string|max:100',
+            'leave_hours' => 'nullable|numeric|min:0.5|max:24',
         ]);
 
         $user = auth()->user();
         $employee = DtrUser::where('emp_code', $user->emp_code)->firstOrFail();
 
-        $payload = [
+        $targetDates = $this->resolveTargetDates($data);
+
+        $basePayload = [
             'employee_id' => $employee->id,
             'type' => $data['type'],
-            'target_date' => $data['target_date'],
             'reason' => $data['reason'],
         ];
 
-        if ($data['type'] === 'time_correction') {
-            $request->validate([
-                'field' => 'required|in:am_in,am_out,pm_in,pm_out',
-                'new_value' => 'required|string|max:10',
-            ]);
-            $payload['field'] = $data['field'];
-            $payload['old_value'] = $data['old_value'];
-            $payload['new_value'] = $data['new_value'];
-        } elseif (in_array($data['type'], ['halfday_am', 'halfday_pm'])) {
-            $payload['field'] = $data['field'] ?: ($data['type'] === 'halfday_am' ? 'am_out' : 'pm_in');
-            $payload['new_value'] = $data['new_value'] ?: '';
-        } elseif ($data['type'] === 'special_order') {
-            $soData = $request->validate([
-                'so_number' => 'required|string|max:100',
-            ]);
-            $payload['field'] = '';
-            $payload['new_value'] = $soData['so_number'];
-        } elseif ($data['type'] === 'travel_order') {
-            $toData = $request->validate([
-                'to_number' => 'required|string|max:100',
-            ]);
-            $payload['field'] = '';
-            $payload['new_value'] = $toData['to_number'];
-        } else {
-            $payload['field'] = '';
-            $payload['new_value'] = '';
+        $firstRequest = null;
+        foreach ($targetDates as $targetDate) {
+            $payload = $basePayload;
+            $payload['target_date'] = $targetDate;
+
+            if ($data['type'] === 'time_correction') {
+                $request->validate([
+                    'field' => 'required|in:am_in,am_out,pm_in,pm_out',
+                    'new_value' => 'required|string|max:10',
+                ]);
+                $payload['field'] = $data['field'];
+                $payload['old_value'] = $data['old_value'];
+                $payload['new_value'] = $data['new_value'];
+            } elseif ($data['type'] === 'wfh') {
+                $payload['field'] = '';
+                $payload['new_value'] = $data['wfh_type'] ?? 'whole_day';
+            } elseif ($data['type'] === 'special_order') {
+                $soData = $request->validate([
+                    'so_number' => 'required|string|max:100',
+                ]);
+                $payload['field'] = $data['so_type'] ?? 'whole_day';
+                $payload['new_value'] = $soData['so_number'];
+            } elseif ($data['type'] === 'travel_order') {
+                $toData = $request->validate([
+                    'to_number' => 'required|string|max:100',
+                ]);
+                $payload['field'] = $data['to_type'] ?? 'whole_day';
+                $payload['new_value'] = $toData['to_number'];
+            } elseif ($data['type'] === 'work_suspension') {
+                $payload['field'] = '';
+                $payload['new_value'] = $data['ws_type'] ?? 'whole_day';
+            } elseif ($data['type'] === 'on_leave') {
+                $leaveData = $request->validate([
+                    'leave_hours' => 'required|numeric|min:0.5|max:24',
+                ]);
+                $payload['field'] = '';
+                $payload['new_value'] = (string) $leaveData['leave_hours'];
+            } elseif ($data['type'] === 'locator_slip') {
+                $lsData = $request->validate([
+                    'ls_number' => 'required|string|max:100',
+                ]);
+                $payload['field'] = $data['ls_type'] ?? 'whole_day';
+                $payload['new_value'] = $lsData['ls_number'];
+            } else {
+                $payload['field'] = '';
+                $payload['new_value'] = '';
+            }
+
+            $editRequest = DtrEditRequest::create($payload);
+            if (!$firstRequest) {
+                $firstRequest = $editRequest;
+            }
         }
 
-        $editRequest = DtrEditRequest::create($payload);
-
-        $this->notifySupervisors($editRequest, $employee);
+        if ($firstRequest) {
+            $this->notifySupervisors($firstRequest, $employee);
+        }
 
         return back()->with('success', 'Edit DTR request is successfully sent to the supervisor.');
+    }
+
+    private function resolveTargetDates($data)
+    {
+        if (in_array($data['type'], ['special_order', 'travel_order'])
+            && !empty($data['from_date'])
+            && !empty($data['to_date'])) {
+            $dates = [];
+            $current = new \DateTime($data['from_date']);
+            $end = new \DateTime($data['to_date']);
+            while ($current <= $end) {
+                $dates[] = $current->format('Y-m-d');
+                $current->modify('+1 day');
+            }
+            return $dates;
+        }
+        return [$data['target_date']];
     }
 
     public function approve(DtrEditRequest $editRequest)

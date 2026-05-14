@@ -14,7 +14,7 @@ class DtrSetting extends Model
 
     public static function getSettings(): array
     {
-        return Cache::remember('dtr_settings', 60, function () {
+        return Cache::remember('dtr_settings', 1440, function () {
             return self::pluck('setting_value', 'setting_key')->toArray();
         });
     }

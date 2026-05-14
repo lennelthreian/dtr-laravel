@@ -12,7 +12,7 @@ class DtrUser extends Model
     protected $fillable = [
         'emp_code', 'first_name', 'last_name', 'middle_name',
         'position', 'sex', 'department', 'office', 'section', 'office_id', 'section_id',
-        'employee_status', 'is_active',
+        'employee_status', 'is_active', 'default_work_week',
     ];
 
     protected $casts = [

@@ -61,21 +61,23 @@
     @foreach ($allDtrs as $index => $item)
         @php
             $presentDays = 0; $totalMin = 0; $totalLate = 0; $totalUndertime = 0;
+            $empDefaultWW = $item['employee']->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
             foreach ($item['dtrData'] as $dayNum => $day) {
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
-                if ($day['has_punch'] && $dow <= $settings['max_dow']) {
+                $dayMaxDow = isset($day['work_week_type']) ? ($day['work_week_type'] === '4-day' ? 4 : 5) : ($empDefaultWW === '4-day' ? 4 : 5);
+                if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
                     $presentDays++;
-                    if ($day['total_hours']) {
+                    if (!empty($day['total_hours'])) {
                         $parts = explode(':', $day['total_hours']);
                         $totalMin += (int) $parts[0] * 60 + (int) $parts[1];
                     }
-                    if (strpos($day['remarks'], 'Late:') !== false) {
+                    if (!empty($day['remarks']) && strpos($day['remarks'], 'Late:') !== false) {
                         preg_match_all('/(\d+):(\d+)/', $day['remarks'], $m);
                         for ($i = 0; $i < count($m[0]); $i++) {
                             $totalLate += (int) $m[1][$i] * 60 + (int) $m[2][$i];
                         }
                     }
-                    if (strpos($day['remarks'], 'UT:') !== false) {
+                    if (!empty($day['remarks']) && strpos($day['remarks'], 'UT:') !== false) {
                         preg_match('/UT: (\d+):(\d+)/', $day['remarks'], $u);
                         if (isset($u[1])) {
                             $totalUndertime += (int) $u[1] * 60 + (int) $u[2];

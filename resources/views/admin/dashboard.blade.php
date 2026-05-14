@@ -22,7 +22,10 @@
                 <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
+                <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
+            </nav>
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
@@ -32,7 +35,7 @@
         <div class="main-content">
             <div class="admin-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
                 <h1 style="font-size:22px;font-weight:700;color:var(--primary);margin:0;">Dashboard</h1>
-                <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                <form method="POST" action="{{ route('logout') }}" class="logout-corner">
                     @csrf
                     <button class="btn btn-outline btn-sm">Logout</button>
                 </form>

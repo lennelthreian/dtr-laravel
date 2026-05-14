@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\DtrSetting;
 use App\Models\DtrUser;
+use App\Models\GlobalHoliday;
 use App\Models\Office;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -189,5 +191,97 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.settings')->with('success', 'Settings updated.');
+    }
+
+    public function holidays(Request $request)
+    {
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+        $holidays = GlobalHoliday::whereBetween('target_date', ["$year-$month-01", "$year-$month-$daysInMonth"])
+            ->orderBy('target_date')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->target_date->format('Y-m-d');
+            });
+        $firstDayOfWeek = date('N', strtotime("$year-$month-01"));
+
+        $weeks = [];
+        $day = 1;
+        $totalCells = ceil(($firstDayOfWeek + $daysInMonth - 1) / 7) * 7;
+        for ($i = 0; $i < $totalCells; $i++) {
+            $weekIndex = intdiv($i, 7);
+            if (!isset($weeks[$weekIndex])) $weeks[$weekIndex] = [];
+            if ($i < $firstDayOfWeek - 1 || $day > $daysInMonth) {
+                $weeks[$weekIndex][] = null;
+            } else {
+                $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                $weeks[$weekIndex][] = [
+                    'day' => $day,
+                    'date' => $dateStr,
+                    'holiday' => $holidays->get($dateStr),
+                ];
+                $day++;
+            }
+        }
+
+        return view('admin.holidays', compact('holidays', 'month', 'year', 'daysInMonth', 'weeks'));
+    }
+
+    public function storeHoliday(Request $request)
+    {
+        $data = $request->validate([
+            'target_date' => 'required|date|unique:global_holidays,target_date',
+            'type' => 'required|in:holiday,work_suspension',
+            'value' => 'required|in:whole_day,am,pm',
+            'description' => 'nullable|string|max:200',
+        ]);
+
+        GlobalHoliday::create($data);
+        $m = date('m', strtotime($data['target_date']));
+        $y = date('Y', strtotime($data['target_date']));
+        Cache::forget('global_holidays.' . $y . '.' . $m);
+
+        return redirect()->route('admin.holidays', ['month' => $m, 'year' => $y])
+            ->with('success', ucwords(str_replace('_', ' ', $data['type'])) . ' set for ' . date('M d, Y', strtotime($data['target_date'])));
+    }
+
+    public function deleteHoliday(GlobalHoliday $holiday)
+    {
+        $month = $holiday->target_date->format('m');
+        $year = $holiday->target_date->format('Y');
+        $holiday->delete();
+        Cache::forget('global_holidays.' . $year . '.' . $month);
+
+        return redirect()->route('admin.holidays', ['month' => $month, 'year' => $year])
+            ->with('success', 'Removed.');
+    }
+
+    public function workArrangement()
+    {
+        $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
+        $globalSetting = DtrSetting::where('setting_key', 'four_day_work_week')->first();
+        return view('admin.work-arrangement', compact('employees', 'globalSetting'));
+    }
+
+    public function updateGlobalWorkWeek(Request $request)
+    {
+        $data = $request->validate(['value' => 'required|in:0,1']);
+        $setting = DtrSetting::where('setting_key', 'four_day_work_week')->first();
+        if ($setting) {
+            $setting->setting_value = $data['value'];
+            $setting->save();
+        }
+        return redirect()->route('admin.work-arrangement')->with('success', 'Global work week updated.');
+    }
+
+    public function updateEmployeeWorkWeek(Request $request, DtrUser $employee)
+    {
+        $data = $request->validate(['default_work_week' => 'required|in:5-day,4-day,default']);
+        $value = $data['default_work_week'] === 'default' ? null : $data['default_work_week'];
+        $employee->update(['default_work_week' => $value]);
+        return redirect()->route('admin.work-arrangement')->with('success', "{$employee->full_name} updated.");
     }
 }

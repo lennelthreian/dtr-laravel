@@ -9,10 +9,11 @@
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
 </head>
 <body>
+    @php $currentUser = auth()->user(); @endphp
+
     <div class="layout-sidebar">
         <div class="sidebar">
             <div class="sidebar-header">
-                @php $currentUser = auth()->user(); @endphp
                 @if (!empty($settings['logo_path']))
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
@@ -38,10 +39,6 @@
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%;">Logout</button>
-                </form>
             </div>
         </div>
 
@@ -92,6 +89,10 @@
                         @endif
                     </div>
                 </div>
+                <form method="POST" action="{{ route('logout') }}" class="logout-corner">
+                    @csrf
+                    <button class="btn btn-outline btn-sm">Logout</button>
+                </form>
             </div>
 
             @if (session('success'))
