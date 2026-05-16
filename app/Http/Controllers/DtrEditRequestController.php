@@ -35,8 +35,11 @@ class DtrEditRequestController extends Controller
             'so_type' => 'nullable|in:whole_day,am,pm',
             'to_type' => 'nullable|in:whole_day,am,pm',
             'ws_type' => 'nullable|in:whole_day,am,pm',
-            'ls_type' => 'nullable|in:whole_day,am,pm',
-            'ls_number' => 'nullable|string|max:100',
+            'ls_type' => 'nullable|in:official,personal',
+            'ls_whereabouts' => 'nullable|string|max:255',
+            'ls_time_left' => 'nullable|date_format:H:i',
+            'ls_time_returned' => 'nullable|date_format:H:i',
+            'ls_no_return' => 'nullable|boolean',
             'so_number' => 'nullable|string|max:100',
             'to_number' => 'nullable|string|max:100',
             'leave_hours' => 'nullable|numeric|min:0.5|max:24',
@@ -92,10 +95,13 @@ class DtrEditRequestController extends Controller
                 $payload['new_value'] = (string) $leaveData['leave_hours'];
             } elseif ($data['type'] === 'locator_slip') {
                 $lsData = $request->validate([
-                    'ls_number' => 'required|string|max:100',
+                    'ls_whereabouts' => 'required|string|max:255',
                 ]);
-                $payload['field'] = $data['ls_type'] ?? 'whole_day';
-                $payload['new_value'] = $lsData['ls_number'];
+                $payload['field'] = $data['ls_type'] ?? 'official';
+                $payload['new_value'] = $lsData['ls_whereabouts'];
+                $payload['ls_time_left'] = ($data['ls_time_left'] ?? '') ?: null;
+                $payload['ls_time_returned'] = !empty($data['ls_no_return']) ? null : (($data['ls_time_returned'] ?? '') ?: null);
+                $payload['ls_no_return'] = !empty($data['ls_no_return']);
             } else {
                 $payload['field'] = '';
                 $payload['new_value'] = '';

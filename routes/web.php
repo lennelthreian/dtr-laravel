@@ -25,6 +25,8 @@ Route::get('/sections-by-office/{office}', function (App\Models\Office $office) 
 Route::middleware('auth')->group(function () {
     Route::get('/dtr', [App\Http\Controllers\DtrController::class, 'index'])
         ->name('dtr.index');
+    Route::get('/dtr/dashboard', [App\Http\Controllers\DtrController::class, 'dashboard'])
+        ->name('dtr.dashboard');
     Route::get('/dtr/show', [App\Http\Controllers\DtrController::class, 'show'])
         ->name('dtr.show');
     Route::get('/dtr/print-all', [App\Http\Controllers\DtrController::class, 'printAll'])

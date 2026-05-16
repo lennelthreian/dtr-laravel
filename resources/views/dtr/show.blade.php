@@ -21,7 +21,10 @@
                 <p>{{ $currentUser->name }}</p>
             </div>
             <nav class="sidebar-nav">
-                <a href="{{ route('dtr.index') }}" class="active">
+                <a href="{{ route('dtr.dashboard') }}" class="{{ request()->routeIs('dtr.dashboard') ? 'active' : '' }}">
+                    <span>&#128197;</span> <span>Dashboard</span>
+                </a>
+                <a href="{{ route('dtr.index') }}" class="{{ request()->routeIs('dtr.index') ? 'active' : '' }}">
                     <span>&#128196;</span> <span>e-DTR Records</span>
                 </a>
                 @if ($currentUser->is_super || $isSupervisor)
@@ -157,7 +160,13 @@
                                                 $details = $label . ': ' . $req->new_value;
                                             } elseif ($req->type === 'on_leave' && $req->new_value) {
                                                 $details = 'On Leave (' . $req->new_value . ' hrs)';
-                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'locator_slip']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                            } elseif ($req->type === 'locator_slip') {
+                                                $lsLabel = $req->field === 'personal' ? 'Personal' : 'Official';
+                                                $timeLeft = $req->ls_time_left ? date('h:i A', strtotime($req->ls_time_left)) : '';
+                                                $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
+                                                $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                                                $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order']) && $req->new_value && $req->new_value !== 'whole_day') {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                                 if ($req->new_value === 'am') $details .= ' (AM)';
                                                 elseif ($req->new_value === 'pm') $details .= ' (PM)';
@@ -227,7 +236,13 @@
                                                 $details = $label . ': ' . $req->new_value;
                                             } elseif ($req->type === 'on_leave' && $req->new_value) {
                                                 $details = 'On Leave (' . $req->new_value . ' hrs)';
-                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'locator_slip']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                            } elseif ($req->type === 'locator_slip') {
+                                                $lsLabel = $req->field === 'personal' ? 'Personal' : 'Official';
+                                                $timeLeft = $req->ls_time_left ? date('h:i A', strtotime($req->ls_time_left)) : '';
+                                                $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
+                                                $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                                                $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order']) && $req->new_value && $req->new_value !== 'whole_day') {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                                 if ($req->new_value === 'am') $details .= ' (AM)';
                                                 elseif ($req->new_value === 'pm') $details .= ' (PM)';
@@ -300,7 +315,7 @@
                     </div>
                     <div class="form-group">
                         <label for="modal_new_value">Correct value</label>
-                        <input type="text" name="new_value" id="modal_new_value" placeholder="e.g. 08:00" class="form-control">
+                        <input type="time" name="new_value" id="modal_new_value" class="form-control" style="width:180px;">
                     </div>
                 </div>
 
@@ -405,19 +420,37 @@
                         <label>Locator Slip Type</label>
                         <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
                             <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
-                                <input type="radio" name="ls_type" value="whole_day" checked> Whole Day
+                                <input type="radio" name="ls_type" value="official" checked> Official
                             </label>
                             <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
-                                <input type="radio" name="ls_type" value="am"> AM
-                            </label>
-                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
-                                <input type="radio" name="ls_type" value="pm"> PM
+                                <input type="radio" name="ls_type" value="personal"> Personal
                             </label>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="modal_ls_number">Locator Slip No.</label>
-                        <input type="text" name="ls_number" id="modal_ls_number" placeholder="e.g. LS-2024-001" class="form-control">
+                        <label for="modal_ls_whereabouts">Whereabouts</label>
+                        <input type="text" name="ls_whereabouts" id="modal_ls_whereabouts" placeholder="e.g. Field visit, meeting" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_ls_time_left">Time Left</label>
+                        <input type="time" name="ls_time_left" id="modal_ls_time_left" class="form-control" style="width:180px;">
+                    </div>
+                    <div id="lsReturnFields">
+                        <div class="form-group">
+                            <label for="modal_ls_time_returned">Actual Time Returned</label>
+                            <input type="time" name="ls_time_returned" id="modal_ls_time_returned" class="form-control" style="width:180px;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Return Status</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ls_no_return" value="0" checked onchange="toggleNoReturn()"> With Return
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ls_no_return" value="1" onchange="toggleNoReturn()"> No Return
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -465,9 +498,18 @@
             document.querySelector('input[name="wfh_type"][value="whole_day"]').checked = true;
             document.querySelector('input[name="so_type"][value="whole_day"]').checked = true;
             document.querySelector('input[name="to_type"][value="whole_day"]').checked = true;
-            document.querySelector('input[name="ls_type"][value="whole_day"]').checked = true;
-            document.getElementById('modal_ls_number').value = '';
+            document.querySelector('input[name="ls_type"][value="official"]').checked = true;
+            document.getElementById('modal_ls_whereabouts').value = '';
+            document.getElementById('modal_ls_time_left').value = '';
+            document.getElementById('modal_ls_time_returned').value = '';
+            document.querySelector('input[name="ls_no_return"][value="0"]').checked = true;
+            document.getElementById('lsReturnFields').style.display = 'block';
             document.getElementById('modal_leave_hours').value = '';
+        }
+
+        function toggleNoReturn() {
+            var noReturn = document.querySelector('input[name="ls_no_return"]:checked');
+            document.getElementById('lsReturnFields').style.display = noReturn && noReturn.value === '1' ? 'none' : 'block';
         }
 
         function closeEditRequest() {
@@ -531,9 +573,9 @@
                 onLeaveFields.style.display = 'block';
             } else if (type === 'locator_slip') {
                 locatorSlipFields.style.display = 'block';
-                reasonLabel.textContent = 'Title of Activity';
-                reasonInput.placeholder = 'Enter the title of activity';
-                document.getElementById('modal_ls_number').required = true;
+                reasonLabel.textContent = 'Purpose';
+                reasonInput.placeholder = 'Enter the purpose';
+                document.getElementById('modal_ls_whereabouts').required = true;
             }
         }
 

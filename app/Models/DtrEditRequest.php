@@ -9,6 +9,7 @@ class DtrEditRequest extends Model
     protected $fillable = [
         'employee_id', 'type', 'target_date', 'field', 'old_value', 'new_value',
         'reason', 'status', 'reviewer_id', 'reviewed_at', 'rejection_reason',
+        'ls_time_left', 'ls_time_returned', 'ls_no_return',
     ];
 
     protected $casts = [

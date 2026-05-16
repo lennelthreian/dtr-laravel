@@ -252,27 +252,19 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
                             case 'locator_slip':
-                                $lsType = $edit->field ?: 'whole_day';
-                                $lsNum = $edit->new_value;
+                                $lsType = $edit->field ?: 'official';
+                                $whereabouts = $edit->new_value;
+                                $typeLabel = $lsType === 'personal' ? 'Personal' : 'Official';
+                                $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
+                                $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                if ($lsType === 'am') {
-                                    $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (AM)';
-                                    $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                } elseif ($lsType === 'pm') {
-                                    $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (PM)';
-                                    $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                } else {
-                                    $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                                    $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '');
-                                    $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                                }
+                                $dtrData[$dayNum]['am_in'] = '';
+                                $dtrData[$dayNum]['am_out'] = '';
+                                $dtrData[$dayNum]['pm_in'] = '';
+                                $dtrData[$dayNum]['pm_out'] = '';
+                                $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                                $dtrData[$dayNum]['remarks'] = 'LS: ' . implode(' | ', $details) . " ($typeLabel)";
+                                $dtrData[$dayNum]['total_hours'] = $edit->ls_no_return ? '04:00' : ($empDefaultWW === '4-day' ? '10:00' : '08:00');
                                 break;
                         }
 
@@ -541,27 +533,19 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
                 case 'locator_slip':
-                    $lsType = $edit->field ?: 'whole_day';
-                    $lsNum = $edit->new_value;
+                    $lsType = $edit->field ?: 'official';
+                    $whereabouts = $edit->new_value;
+                    $typeLabel = $lsType === 'personal' ? 'Personal' : 'Official';
+                    $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
+                    $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
                     $dtrData[$dayNum]['has_punch'] = true;
-                    if ($lsType === 'am') {
-                        $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (AM)';
-                        $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                    } elseif ($lsType === 'pm') {
-                        $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (PM)';
-                        $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                    } else {
-                        $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                        $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '');
-                        $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                    }
+                    $dtrData[$dayNum]['am_in'] = '';
+                    $dtrData[$dayNum]['am_out'] = '';
+                    $dtrData[$dayNum]['pm_in'] = '';
+                    $dtrData[$dayNum]['pm_out'] = '';
+                    $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                    $dtrData[$dayNum]['remarks'] = 'LS: ' . implode(' | ', $details) . " ($typeLabel)";
+                    $dtrData[$dayNum]['total_hours'] = $edit->ls_no_return ? '04:00' : ($empDefaultWW === '4-day' ? '10:00' : '08:00');
                     break;
             }
         }
@@ -682,6 +666,229 @@ class DtrController extends Controller
             'daysInMonth', 'monthName', 'presentDays',
             'totalMinutes', 'totalLate', 'totalUndertime',
             'isOwnDtr', 'isSupervisor', 'pendingRequests', 'approvedRequests'
+        ));
+    }
+
+    public function dashboard(Request $request)
+    {
+        $user = auth()->user();
+        $settings = DtrSetting::getSettings();
+        $settings = $this->backupOriginalSchedule($settings);
+        $settings = $this->applyFourDaySettings($settings);
+
+        $month = (int) $request->input('month', date('m'));
+        $year = (int) $request->input('year', date('Y'));
+
+        $employee = DtrUser::where('emp_code', $user->emp_code)->first();
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+        $dtrData = [];
+        $presentDays = 0;
+        $totalMinutes = 0;
+
+        if ($employee) {
+            $empCode = $employee->emp_code;
+            $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
+
+            $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+            $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
+
+            $approvedEdits = DtrEditRequest::with('employee')
+                ->forEmployee($empCode)
+                ->forPeriod($year, $month)
+                ->approved()
+                ->get();
+
+            foreach ($approvedEdits as $edit) {
+                $dayNum = (int) $edit->target_date->format('j');
+                if (!isset($dtrData[$dayNum])) {
+                    $dtrData[$dayNum] = [
+                        'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
+                        'total_hours' => '', 'remarks' => '', 'has_punch' => false,
+                    ];
+                }
+                $dtrData[$dayNum]['is_edited'] = true;
+
+                switch ($edit->type) {
+                    case 'time_correction':
+                        $dtrData[$dayNum][$edit->field] = $edit->new_value;
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'absent':
+                        $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                        $dtrData[$dayNum]['total_hours'] = '';
+                        $dtrData[$dayNum]['remarks'] = 'Absent';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'halfday_am':
+                        $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                        if ($edit->field === 'am_out' && $edit->new_value) {
+                            $dtrData[$dayNum]['am_out'] = $edit->new_value;
+                        }
+                        $dtrData[$dayNum]['remarks'] = 'Halfday (AM)';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'halfday_pm':
+                        $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                        $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                        if ($edit->field === 'pm_in' && $edit->new_value) {
+                            $dtrData[$dayNum]['pm_in'] = $edit->new_value;
+                        }
+                        $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'holiday':
+                        $dtrData[$dayNum]['remarks'] = 'Holiday';
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['is_holiday'] = true;
+                        break;
+                    case 'wfh':
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $wfhType = $edit->new_value ?: 'whole_day';
+                        if ($wfhType === 'am') {
+                            $dtrData[$dayNum]['am_in'] = 'WFH';
+                            $dtrData[$dayNum]['am_out'] = 'WFH';
+                            $dtrData[$dayNum]['remarks'] = 'WFH (AM)';
+                            $dtrData[$dayNum]['total_hours'] = '04:00';
+                        } elseif ($wfhType === 'pm') {
+                            $dtrData[$dayNum]['pm_in'] = 'WFH';
+                            $dtrData[$dayNum]['pm_out'] = 'WFH';
+                            $dtrData[$dayNum]['remarks'] = 'WFH (PM)';
+                            $dtrData[$dayNum]['total_hours'] = '04:00';
+                        } else {
+                            $dtrData[$dayNum]['am_in'] = 'WFH';
+                            $dtrData[$dayNum]['am_out'] = 'WFH';
+                            $dtrData[$dayNum]['pm_in'] = 'WFH';
+                            $dtrData[$dayNum]['pm_out'] = 'WFH';
+                            $dtrData[$dayNum]['is_wfh'] = true;
+                            $dtrData[$dayNum]['remarks'] = 'WFH';
+                            $dtrData[$dayNum]['total_hours'] = '08:00';
+                        }
+                        break;
+                    case 'special_order':
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['so_number'] = $edit->new_value;
+                        $dtrData[$dayNum]['remarks'] = 'Special Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
+                        $dtrData[$dayNum]['total_hours'] = '08:00';
+                        break;
+                    case 'travel_order':
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['to_number'] = $edit->new_value;
+                        $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($edit->new_value ? ': ' . $edit->new_value : '');
+                        $dtrData[$dayNum]['total_hours'] = '08:00';
+                        break;
+                    case 'work_suspension':
+                        $wsType = $edit->new_value ?: 'whole_day';
+                        if ($wsType === 'am') {
+                            $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                            $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                            $dtrData[$dayNum]['remarks'] = 'Work Suspension (AM)';
+                        } elseif ($wsType === 'pm') {
+                            $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                            $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                            $dtrData[$dayNum]['remarks'] = 'Work Suspension (PM)';
+                        } else {
+                            $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                            $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                            $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                            $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                            $dtrData[$dayNum]['total_hours'] = '';
+                            $dtrData[$dayNum]['remarks'] = 'Work Suspension';
+                        }
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
+                    case 'locator_slip':
+                        $lsType = $edit->field ?: 'official';
+                        $whereabouts = $edit->new_value;
+                        $typeLabel = $lsType === 'personal' ? 'Personal' : 'Official';
+                        $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
+                        $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['am_in'] = '';
+                        $dtrData[$dayNum]['am_out'] = '';
+                        $dtrData[$dayNum]['pm_in'] = '';
+                        $dtrData[$dayNum]['pm_out'] = '';
+                        $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                        $dtrData[$dayNum]['remarks'] = 'LS: ' . implode(' | ', $details) . " ($typeLabel)";
+                        $dtrData[$dayNum]['total_hours'] = $edit->ls_no_return ? '04:00' : '08:00';
+                        break;
+                }
+            }
+
+            foreach ($dtrData as $dayNum => &$day) {
+                if (isset($day['work_week_type'])) {
+                    $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
+                    $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
+                }
+            }
+            unset($day);
+
+            foreach ($dtrData as $dayNum => $day) {
+                $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
+                $dayMaxDow = $empDefaultWW === '4-day' ? 4 : 5;
+                if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
+                    $presentDays++;
+                    if (!empty($day['total_hours'])) {
+                        $parts = explode(':', $day['total_hours']);
+                        $totalMinutes += (int) $parts[0] * 60 + (int) $parts[1];
+                    }
+                }
+            }
+        }
+
+        if (!isset($empDefaultWW)) {
+            $empDefaultWW = ($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day';
+        }
+
+        $holidays = \App\Models\GlobalHoliday::whereBetween('target_date', ["$year-$month-01", "$year-$month-$daysInMonth"])
+            ->orderBy('target_date')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->target_date->format('Y-m-d');
+            });
+
+        $firstDayOfWeek = date('N', strtotime("$year-$month-01"));
+        $weeks = [];
+        $day = 1;
+        $totalCells = ceil(($firstDayOfWeek + $daysInMonth - 1) / 7) * 7;
+        for ($i = 0; $i < $totalCells; $i++) {
+            $weekIndex = intdiv($i, 7);
+            if (!isset($weeks[$weekIndex])) $weeks[$weekIndex] = [];
+            if ($i < $firstDayOfWeek - 1 || $day > $daysInMonth) {
+                $weeks[$weekIndex][] = null;
+            } else {
+                $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                $dayData = $dtrData[$day] ?? [];
+                $weeks[$weekIndex][] = [
+                    'day' => $day,
+                    'date' => $dateStr,
+                    'holiday' => $holidays->get($dateStr),
+                    'dtr' => $dayData,
+                ];
+                $day++;
+            }
+        }
+
+        $totalHoursFormatted = sprintf('%02d:%02d', floor($totalMinutes / 60), $totalMinutes % 60);
+
+        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        $isSupervisor = $user->is_super;
+        if (!$isSupervisor && $dtrUser) {
+            $isSupervisor = \App\Models\Section::where('supervisor_id', $dtrUser->id)->exists()
+                || \App\Models\Office::where('supervisor_id', $dtrUser->id)->exists()
+                || \App\Models\Office::where('oic_id', $dtrUser->id)->exists();
+        }
+
+        return view('dtr.dashboard', compact(
+            'employee', 'settings', 'dtrData', 'month', 'year',
+            'daysInMonth', 'monthName', 'presentDays', 'totalHoursFormatted',
+            'weeks', 'empDefaultWW', 'isSupervisor'
         ));
     }
 
@@ -840,27 +1047,19 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
                     case 'locator_slip':
-                        $lsType = $edit->field ?: 'whole_day';
-                        $lsNum = $edit->new_value;
+                        $lsType = $edit->field ?: 'official';
+                        $whereabouts = $edit->new_value;
+                        $typeLabel = $lsType === 'personal' ? 'Personal' : 'Official';
+                        $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
+                        $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
                         $dtrData[$dayNum]['has_punch'] = true;
-                        if ($lsType === 'am') {
-                            $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (AM)';
-                            $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        } elseif ($lsType === 'pm') {
-                            $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '') . ' (PM)';
-                            $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        } else {
-                            $dtrData[$dayNum]['am_in'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['am_out'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['pm_in'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['pm_out'] = 'LS: ' . $lsNum;
-                            $dtrData[$dayNum]['remarks'] = 'Locator Slip' . ($lsNum ? ': ' . $lsNum : '');
-                            $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                        }
+                        $dtrData[$dayNum]['am_in'] = '';
+                        $dtrData[$dayNum]['am_out'] = '';
+                        $dtrData[$dayNum]['pm_in'] = '';
+                        $dtrData[$dayNum]['pm_out'] = '';
+                        $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                        $dtrData[$dayNum]['remarks'] = 'LS: ' . implode(' | ', $details) . " ($typeLabel)";
+                        $dtrData[$dayNum]['total_hours'] = $edit->ls_no_return ? '04:00' : ($empDefaultWW === '4-day' ? '10:00' : '08:00');
                         break;
                 }
             }
