@@ -24,8 +24,9 @@
     for ($d = 1; $d <= $daysInMonth; $d++) {
         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
         $dayMaxDow = (isset($dtrData[$d]['work_week_type']) ? ($dtrData[$d]['work_week_type'] === '4-day' ? 4 : 5) : $empMaxDow);
-        if ($dow <= $dayMaxDow) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentWeekdays++; }
-        if ($dow == 6) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch']) $presentSaturdays++; }
+        $isExcluded = isset($dtrData[$d]) && (!empty($dtrData[$d]['is_holiday']) || !empty($dtrData[$d]['is_work_suspension']));
+        if ($dow <= $dayMaxDow && !$isExcluded) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentWeekdays++; }
+        if ($dow == 6 && !$isExcluded) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentSaturdays++; }
     }
 @endphp
 <div style="display:flex; justify-content:space-between; font-size:11px; margin:6px 0; font-style:italic;">
@@ -35,6 +36,15 @@
 
 
 <table class="dtr-table">
+    <colgroup>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+    </colgroup>
     <thead>
         <tr>
             <th rowspan="2">Day</th>
@@ -64,6 +74,7 @@
             @endphp
             @php
                 $edited = isset($dtrData[$d]['is_edited']) && $dtrData[$d]['is_edited'];
+                $editedFields = $dtrData[$d]['edited_fields'] ?? [];
                 $rowClass = trim(($isNonWorkingDay && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : '') . ($edited ? 'edited' : ''));
             @endphp
             @php
@@ -79,44 +90,107 @@
                         <span class="ww-badge no-print">{{ $dayWW === '4-day' ? '4d' : '5d' }}</span>
                     @endif
                 </td>
-                @if (!empty($dtrData[$d]['so_number']))
-                    <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
-                    <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
-                    <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
-                    <td class="time-col has-val">SO: {{ $dtrData[$d]['so_number'] }}</td>
+                @if (!empty($dtrData[$d]['so_number']) && strpos($dtrData[$d]['remarks'] ?? '', '(AM)') === false && strpos($dtrData[$d]['remarks'] ?? '', '(PM)') === false)
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] }}</td>
                     <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
-                @elseif (!empty($dtrData[$d]['to_number']))
-                    <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
-                    <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
-                    <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
-                    <td class="time-col has-val">TO: {{ $dtrData[$d]['to_number'] }}</td>
+                @elseif (!empty($dtrData[$d]['to_number']) && strpos($dtrData[$d]['remarks'] ?? '', '(AM)') === false && strpos($dtrData[$d]['remarks'] ?? '', '(PM)') === false)
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] }}</td>
+                    <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
+                    <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
+                @elseif (!empty($dtrData[$d]['ob_number']) && strpos($dtrData[$d]['remarks'] ?? '', '(AM)') === false && strpos($dtrData[$d]['remarks'] ?? '', '(PM)') === false)
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] }}</td>
                     <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif (!empty($dtrData[$d]['is_wfh']))
-                    <td class="time-col has-val">WFH</td>
-                    <td class="time-col has-val">WFH</td>
-                    <td class="time-col has-val">WFH</td>
-                    <td class="time-col has-val">WFH</td>
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">WFH</td>
+                    <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
+                    <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
+                @elseif (isset($dtrData[$d]['am_in'], $dtrData[$d]['pm_in']) && $dtrData[$d]['am_in'] === 'ON LEAVE' && $dtrData[$d]['pm_in'] === 'ON LEAVE')
+                    <td class="time-col has-val" colspan="4" style="text-align:center;font-weight:600;color:#166534;">ON LEAVE</td>
                     <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif (!empty($dtrData[$d]['is_holiday']))
-                    <td class="time-col has-val">Holiday</td>
-                    <td class="time-col has-val">Holiday</td>
-                    <td class="time-col has-val">Holiday</td>
-                    <td class="time-col has-val">Holiday</td>
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">Holiday</td>
+                    <td class="hours-col"></td>
+                    <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
+                @elseif (!empty($dtrData[$d]['is_work_suspension']))
+                    <td class="time-col has-val" colspan="4" style="text-align:center;">Work Suspension</td>
                     <td class="hours-col"></td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @elseif ($hasData)
-                    @php $ai = $dtrData[$d]['am_in']; $ao = $dtrData[$d]['am_out']; $pi = $dtrData[$d]['pm_in']; $po = $dtrData[$d]['pm_out']; @endphp
-                    <td class="time-col{{ empty($ai) ? ' no-entry' : ($edited ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
-                    <td class="time-col{{ empty($ao) ? ' no-entry' : ($edited ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
-                    <td class="time-col{{ empty($pi) ? ' no-entry' : ($edited ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
-                    <td class="time-col{{ empty($po) ? ' no-entry' : ($edited ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                    @php
+                        $ai = $dtrData[$d]['am_in']; $ao = $dtrData[$d]['am_out'];
+                        $pi = $dtrData[$d]['pm_in']; $po = $dtrData[$d]['pm_out'];
+                        $amAbsent = ($ai ?? '') === 'ABSENT' && ($ao ?? '') === 'ABSENT';
+                        $pmAbsent = ($pi ?? '') === 'ABSENT' && ($po ?? '') === 'ABSENT';
+                        $amWfh = ($ai ?? '') === 'WFH';
+                        $pmWfh = ($pi ?? '') === 'WFH';
+                        $amSo = strpos(($ai ?? ''), 'SO:') === 0;
+                        $pmSo = strpos(($pi ?? ''), 'SO:') === 0;
+                        $amTo = strpos(($ai ?? ''), 'TO:') === 0;
+                        $pmTo = strpos(($pi ?? ''), 'TO:') === 0;
+                        $amOb = strpos(($ai ?? ''), 'OB:') === 0;
+                        $pmOb = strpos(($pi ?? ''), 'OB:') === 0;
+                    @endphp
+                    @if ($amSo && $pmSo)
+                        <td class="time-col edited-val" colspan="4" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
+                    @elseif ($amSo)
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                    @elseif ($pmSo)
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
+                    @elseif ($amTo && $pmTo)
+                        <td class="time-col edited-val" colspan="4" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
+                    @elseif ($amTo)
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                    @elseif ($pmTo)
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
+                    @elseif ($amOb && $pmOb)
+                        <td class="time-col edited-val" colspan="4" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
+                    @elseif ($amOb)
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                    @elseif ($pmOb)
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col edited-val" colspan="2" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
+                    @elseif ($amAbsent && $pmAbsent)
+                        <td class="time-col has-val" colspan="4" style="text-align:center;">ABSENT</td>
+                    @elseif ($amAbsent)
+                        <td class="time-col has-val" colspan="2" style="text-align:center;">ABSENT</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : ' has-val' }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : ' has-val' }}">{{ $po }}</td>
+                    @elseif ($pmAbsent)
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : ' has-val' }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : ' has-val' }}">{{ $ao }}</td>
+                        <td class="time-col has-val" colspan="2" style="text-align:center;">ABSENT</td>
+                    @elseif ($amWfh && $pmWfh)
+                        <td class="time-col has-val" colspan="4" style="text-align:center;">WFH</td>
+                    @elseif ($amWfh)
+                        <td class="time-col has-val" colspan="2" style="text-align:center;">WFH</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : ' has-val' }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : ' has-val' }}">{{ $po }}</td>
+                    @elseif ($pmWfh)
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : ' has-val' }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : ' has-val' }}">{{ $ao }}</td>
+                        <td class="time-col has-val" colspan="2" style="text-align:center;">WFH</td>
+                    @else
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                    @endif
                     <td class="hours-col">{{ $dtrData[$d]['total_hours'] }}</td>
-                    <td class="remarks-col">
-                        {{ $dtrData[$d]['remarks'] }}
-                    </td>
+                    <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
                 @else
                     <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
                     <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
@@ -147,26 +221,30 @@
     $totalUndertimeFormatted = sprintf('%02d:%02d', floor($totalUndertime / 60), $totalUndertime % 60);
 @endphp
 
-<div class="dtr-summary">
-    <div class="sum-left">
-        <strong>TOTAL</strong> &mdash; Days Present: {{ $presentWeekdays }} / {{ $totalWeekdays }}
-        &nbsp;|&nbsp; Hours: <strong>{{ $totalHoursFormatted }}</strong>
-    </div>
-    <div class="sum-right">
-        @if ($totalLate > 0) Late: {{ $totalLateFormatted }} @endif
-        @if ($totalUndertime > 0){{ $totalLate > 0 ? ' | ' : '' }} UT: {{ $totalUndertimeFormatted }} @endif
-        &nbsp;|&nbsp;
-        @php $ww = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-Day' : '5-Day'); @endphp
-        {{ $ww }}
-        @if ($ww === '4-Day')
-            AM {{ $settings['fdww_am_start'] ?? '07:00' }}-{{ $settings['fdww_am_end'] ?? '12:00' }}
-            PM {{ $settings['fdww_pm_start'] ?? '13:00' }}-{{ $settings['fdww_pm_end'] ?? '19:00' }}
-        @else
-            AM 07:00-{{ $settings['original_am_end'] ?? '12:00' }}
-            PM {{ $settings['original_pm_start'] ?? '13:00' }}-{{ $settings['original_pm_end'] ?? '17:00' }}
+<table class="dtr-table" style="margin-top:0; border-top:none;">
+    <colgroup>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+    </colgroup>
+    <tr class="dtr-summary">
+        <td colspan="5">
+            <strong>TOTAL</strong> &mdash; Days Present: {{ $presentWeekdays }} / {{ $totalWeekdays }}
+            &nbsp;|&nbsp; Hours: <strong>{{ $totalHoursFormatted }}</strong>
+        </td>
+        <td colspan="2">
+            @if ($totalLate > 0) Late: {{ $totalLateFormatted }} @endif
+            @if ($totalUndertime > 0){{ $totalLate > 0 ? ' | ' : '' }} UT: {{ $totalUndertimeFormatted }} @endif
+        </td>
+        @if (isset($isOwnDtr) && $isOwnDtr)
+            <td class="no-print"></td>
         @endif
-    </div>
-</div>
+    </tr>
+</table>
 
 <div style="text-align:left; font-style:italic; font-size:11px; margin:10px 0;">
     I certify on my honor that the above is a true and correct report<br>

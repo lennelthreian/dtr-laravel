@@ -23,7 +23,7 @@ class DtrEditRequestController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => 'required|in:time_correction,absent,holiday,wfh,special_order,travel_order,work_suspension,locator_slip,on_leave',
+            'type' => 'required|in:time_correction,absent,holiday,wfh,special_order,travel_order,official_business,work_suspension,locator_slip,on_leave',
             'target_date' => 'nullable|date',
             'from_date' => 'nullable|date',
             'to_date' => 'nullable|date',
@@ -34,6 +34,7 @@ class DtrEditRequestController extends Controller
             'wfh_type' => 'nullable|in:whole_day,am,pm',
             'so_type' => 'nullable|in:whole_day,am,pm',
             'to_type' => 'nullable|in:whole_day,am,pm',
+            'ob_type' => 'nullable|in:whole_day,am,pm',
             'ws_type' => 'nullable|in:whole_day,am,pm',
             'ls_type' => 'nullable|in:official,personal',
             'ls_whereabouts' => 'nullable|string|max:255',
@@ -42,7 +43,9 @@ class DtrEditRequestController extends Controller
             'ls_no_return' => 'nullable|boolean',
             'so_number' => 'nullable|string|max:100',
             'to_number' => 'nullable|string|max:100',
+            'ob_number' => 'nullable|string|max:100',
             'leave_hours' => 'nullable|numeric|min:0.5|max:24',
+            'leave_type' => 'nullable|in:whole_day,am,pm',
         ]);
 
         $user = auth()->user();
@@ -84,15 +87,19 @@ class DtrEditRequestController extends Controller
                 ]);
                 $payload['field'] = $data['to_type'] ?? 'whole_day';
                 $payload['new_value'] = $toData['to_number'];
+            } elseif ($data['type'] === 'official_business') {
+                $obData = $request->validate([
+                    'ob_number' => 'required|string|max:100',
+                ]);
+                $payload['field'] = $data['ob_type'] ?? 'whole_day';
+                $payload['new_value'] = $obData['ob_number'];
             } elseif ($data['type'] === 'work_suspension') {
                 $payload['field'] = '';
                 $payload['new_value'] = $data['ws_type'] ?? 'whole_day';
             } elseif ($data['type'] === 'on_leave') {
-                $leaveData = $request->validate([
-                    'leave_hours' => 'required|numeric|min:0.5|max:24',
-                ]);
-                $payload['field'] = '';
-                $payload['new_value'] = (string) $leaveData['leave_hours'];
+                $leaveType = $request->input('leave_type', 'whole_day');
+                $payload['field'] = $leaveType === 'whole_day' ? '' : $leaveType;
+                $payload['new_value'] = (string) ($request->input('leave_hours', $leaveType === 'whole_day' ? '8' : '4'));
             } elseif ($data['type'] === 'locator_slip') {
                 $lsData = $request->validate([
                     'ls_whereabouts' => 'required|string|max:255',
@@ -122,7 +129,7 @@ class DtrEditRequestController extends Controller
 
     private function resolveTargetDates($data)
     {
-        if (in_array($data['type'], ['special_order', 'travel_order'])
+        if (in_array($data['type'], ['special_order', 'travel_order', 'official_business'])
             && !empty($data['from_date'])
             && !empty($data['to_date'])) {
             $dates = [];
@@ -137,7 +144,7 @@ class DtrEditRequestController extends Controller
         return [$data['target_date']];
     }
 
-    public function approve(DtrEditRequest $editRequest)
+    public function approve(DtrEditRequest $editRequest, Request $request)
     {
         $this->ensureSupervisor($editRequest);
 
@@ -149,7 +156,41 @@ class DtrEditRequestController extends Controller
 
         $this->notifyEmployee($editRequest, 'approved');
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
         return back()->with('success', 'Edit request approved.');
+    }
+
+    public function batchApprove(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:dtr_edit_requests,id',
+        ]);
+
+        $approved = 0;
+        foreach ($data['ids'] as $id) {
+            $editRequest = DtrEditRequest::find($id);
+            if (!$editRequest || $editRequest->status !== 'pending') continue;
+
+            try {
+                $this->ensureSupervisor($editRequest);
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            $editRequest->update([
+                'status' => 'approved',
+                'reviewer_id' => $this->getSupervisorDtrUserId(),
+                'reviewed_at' => now(),
+            ]);
+
+            $this->notifyEmployee($editRequest, 'approved');
+            $approved++;
+        }
+
+        return back()->with('success', "$approved edit request(s) approved.");
     }
 
     public function reject(Request $request, DtrEditRequest $editRequest)
@@ -169,6 +210,9 @@ class DtrEditRequestController extends Controller
 
         $this->notifyEmployee($editRequest, 'rejected');
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
         return back()->with('success', 'Edit request rejected.');
     }
 

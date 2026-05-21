@@ -78,6 +78,10 @@ class RegisterController extends Controller
 
         auth()->login($user);
 
-        return redirect('/dtr');
+        if (auth()->user()->is_super) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->route('dtr.dashboard');
     }
 }

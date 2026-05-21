@@ -36,6 +36,9 @@
                         <span>&#9881;</span> <span>Admin</span>
                     </a>
                 @endif
+                <a href="{{ route('profile') }}">
+                    <span>&#128100;</span> <span>My Profile</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
@@ -46,11 +49,6 @@
             <div class="navbar" style="margin-bottom:20px;">
                 <div class="navbar-left">
                     <h1 style="font-size:20px; color:var(--primary); margin:0;">Pending Edit Requests</h1>
-                </div>
-                @php $isFdww = ($settings['four_day_work_week'] ?? '0') === '1'; @endphp
-                <div class="ww-toggle-group">
-                    <button class="ww-toggle-btn{{ $isFdww ? '' : ' active' }}" onclick="toggleWorkWeek('0')">5-day WW</button>
-                    <button class="ww-toggle-btn{{ $isFdww ? ' active' : '' }}" onclick="toggleWorkWeek('1')">4-day WW</button>
                 </div>
                 @php $unread = $currentUser->unreadNotifications; @endphp
                 <div class="notif-pos">
@@ -109,61 +107,65 @@
                     <div class="card req-group">
                         <h3>{{ $employeeLabel }}</h3>
                         <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Type</th>
-                                        <th>Details</th>
-                                        <th>Reason</th>
-                                        <th>Submitted</th>
-                                        <th class="text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($requests as $req)
-                                        @php
-                                            $typeLabels = [
-                                                'time_correction' => 'Time Correction',
-                                                'absent' => 'Whole Day Absent',
-                                                'halfday_am' => 'Halfday (AM)',
-                                                'halfday_pm' => 'Halfday (PM)',
-                                                'holiday' => 'Holiday',
-                                                'wfh' => 'WFH',
-                                                'special_order' => 'Special Order',
-                                                'travel_order' => 'Travel Order',
-                                            ];
-                                            $details = '';
-                                            if ($req->type === 'time_correction') {
-                                                $details = $req->field . ': ' . ($req->old_value ?: '&mdash;') . ' &rarr; ' . $req->new_value;
-                                            } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
-                                                $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
-                                                $details = $label . ': ' . $req->new_value;
-                                            } else {
-                                                $details = $typeLabels[$req->type] ?? $req->type;
-                                            }
-                                        @endphp
+                            <form method="POST" action="{{ route('dtr.edit-requests.batch-approve') }}" class="batch-form">
+                                @csrf
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td>{{ $req->target_date->format('M d, Y') }}</td>
-                                            <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
-                                            <td>{!! $details !!}</td>
-                                            <td style="max-width:200px;">{{ $req->reason }}</td>
-                                            <td style="font-size:12px; color:var(--gray-500);">{{ $req->created_at->diffForHumans() }}</td>
-                                            <td class="text-center nowrap">
-                                                <button class="btn btn-outline btn-xs" onclick="viewRequest({{ $req->id }})">View</button>
-                                                <form method="POST" action="{{ route('dtr.edit-request.approve', $req) }}" style="display:inline">
-                                                    @csrf
-                                                    <button class="btn btn-accent btn-xs">Approve</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('dtr.edit-request.reject', $req) }}" style="display:inline" onsubmit="return confirm('Reject this request?')">
-                                                    @csrf
-                                                    <button class="btn btn-danger btn-xs">Reject</button>
-                                                </form>
-                                            </td>
+                                            <th style="width:32px;"><input type="checkbox" class="select-all" onchange="toggleGroup(this)"></th>
+                                            <th>Date</th>
+                                            <th>Type</th>
+                                            <th>Details</th>
+                                            <th>Reason</th>
+                                            <th>Submitted</th>
+                                            <th class="text-center">Action</th>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($requests as $req)
+                                            @php
+                                                $typeLabels = [
+                                                    'time_correction' => 'Time Correction',
+                                                    'absent' => 'Whole Day Absent',
+                                                    'halfday_am' => 'Halfday (AM)',
+                                                    'halfday_pm' => 'Halfday (PM)',
+                                                    'holiday' => 'Holiday',
+                                                    'wfh' => 'WFH',
+                                                    'special_order' => 'Special Order',
+                                                    'travel_order' => 'Travel Order',
+                                                    'official_business' => 'Official Business',
+                                                ];
+                                                $details = '';
+                                                if ($req->type === 'time_correction') {
+                                                    $details = $req->field . ': ' . ($req->old_value ?: '&mdash;') . ' &rarr; ' . $req->new_value;
+                                                } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
+                                                    $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
+                                                    $details = $label . ': ' . $req->new_value;
+                                                } else {
+                                                    $details = $typeLabels[$req->type] ?? $req->type;
+                                                }
+                                            @endphp
+                                            <tr>
+                                                <td><input type="checkbox" name="ids[]" value="{{ $req->id }}" class="req-checkbox"></td>
+                                                <td>{{ $req->target_date->format('M d, Y') }}</td>
+                                                <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
+                                                <td>{!! $details !!}</td>
+                                                <td style="max-width:200px;">{{ $req->reason }}</td>
+                                                <td style="font-size:12px; color:var(--gray-500);">{{ $req->created_at->diffForHumans() }}</td>
+                                                <td class="text-center nowrap">
+                                                    <button type="button" class="btn btn-outline btn-xs" onclick="viewRequest({{ $req->id }})">View</button>
+                                                    <button class="btn btn-accent btn-xs" onclick="singleApprove({{ $req->id }})">Approve</button>
+                                                    <button class="btn btn-danger btn-xs" onclick="singleReject({{ $req->id }})">Reject</button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                                <div class="batch-bar" style="display:none; padding:10px 12px; background:var(--gray-100); border-top:1px solid var(--gray-200);">
+                                    <span class="selected-count" style="font-size:13px; color:var(--gray-600);">0 selected</span>
+                                    <button type="submit" class="btn btn-accent btn-sm" style="margin-left:auto;">Approve Selected</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 @endforeach
@@ -205,7 +207,8 @@
                 holiday: 'Holiday',
                 wfh: 'WFH',
                 special_order: 'Special Order',
-                travel_order: 'Travel Order'
+                travel_order: 'Travel Order',
+                official_business: 'Official Business'
             };
             document.getElementById('viewType').textContent = typeLabels[req.type] || req.type;
             document.getElementById('viewDate').textContent = req.target_date;
@@ -266,19 +269,84 @@
                 });
             }
         });
-        function toggleWorkWeek(val) {
-            fetch('{{ route("dtr.toggle-work-week") }}', {
+        document.querySelectorAll('.batch-form').forEach(function(form) {
+            var checkboxes = form.querySelectorAll('.req-checkbox');
+            var selectAll = form.querySelector('.select-all');
+            var batchBar = form.querySelector('.batch-bar');
+            var countEl = form.querySelector('.selected-count');
+
+            function updateBatchBar() {
+                var checked = form.querySelectorAll('.req-checkbox:checked').length;
+                if (checked > 0) {
+                    batchBar.style.display = 'flex';
+                    countEl.textContent = checked + ' selected';
+                } else {
+                    batchBar.style.display = 'none';
+                }
+            }
+
+            checkboxes.forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    updateBatchBar();
+                    if (selectAll) {
+                        var all = form.querySelectorAll('.req-checkbox');
+                        var checked = form.querySelectorAll('.req-checkbox:checked');
+                        selectAll.checked = all.length === checked.length;
+                    }
+                });
+            });
+
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    form.querySelectorAll('.req-checkbox').forEach(function(cb) {
+                        cb.checked = selectAll.checked;
+                    });
+                    updateBatchBar();
+                });
+            }
+        });
+
+        function toggleGroup(el) {
+            var form = el.closest('form');
+            form.querySelectorAll('.req-checkbox').forEach(function(cb) {
+                cb.checked = el.checked;
+            });
+            var batchBar = form.querySelector('.batch-bar');
+            var countEl = form.querySelector('.selected-count');
+            if (el.checked) {
+                batchBar.style.display = 'flex';
+                countEl.textContent = form.querySelectorAll('.req-checkbox').length + ' selected';
+            } else {
+                batchBar.style.display = 'none';
+            }
+        }
+
+        function singleApprove(id) {
+            if (!confirm('Approve this request?')) return;
+            fetch('/dtr/edit-request/' + id + '/approve', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                },
-                body: JSON.stringify({ value: val })
+                }
             }).then(function(r) { return r.json(); }).then(function(data) {
                 if (data.success) location.reload();
-            });
+            }).catch(function() { location.reload(); });
         }
+
+        function singleReject(id) {
+            if (!confirm('Reject this request?')) return;
+            fetch('/dtr/edit-request/' + id + '/reject', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                }
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            }).catch(function() { location.reload(); });
+        }
+
         function toggleTheme() {
             var html = document.documentElement;
             var isDark = html.getAttribute('data-theme') === 'dark';

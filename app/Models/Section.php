@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Services\LogsUserActivity;
 
 class Section extends Model
 {
+    use LogsUserActivity;
     protected $fillable = ['office_id', 'name', 'supervisor_id'];
 
     public function office()

@@ -41,6 +41,8 @@ Route::middleware('auth')->group(function () {
         ->name('dtr.edit-request.approve');
     Route::post('/dtr/edit-request/{edit_request}/reject', [App\Http\Controllers\DtrEditRequestController::class, 'reject'])
         ->name('dtr.edit-request.reject');
+    Route::post('/dtr/edit-requests/batch-approve', [App\Http\Controllers\DtrEditRequestController::class, 'batchApprove'])
+        ->name('dtr.edit-requests.batch-approve');
 
     Route::post('/dtr/toggle-work-week', [App\Http\Controllers\DtrController::class, 'toggleWorkWeek'])
         ->name('dtr.toggle-work-week');
@@ -54,6 +56,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/supervisor/pending', [App\Http\Controllers\SupervisorController::class, 'pending'])
         ->name('supervisor.pending');
+
+    Route::get('/profile', [App\Http\Controllers\Auth\ProfileController::class, 'showProfileForm'])
+        ->name('profile');
+    Route::post('/profile', [App\Http\Controllers\Auth\ProfileController::class, 'updateProfile'])
+        ->name('profile.update');
+    Route::get('/password', [App\Http\Controllers\Auth\ProfileController::class, 'showPasswordForm'])
+        ->name('password.form');
+    Route::post('/password', [App\Http\Controllers\Auth\ProfileController::class, 'updatePassword'])
+        ->name('password.update');
 });
 
 Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(function () {
@@ -101,4 +112,6 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('work-arrangement.global');
     Route::post('/work-arrangement/employee/{employee}', [App\Http\Controllers\AdminController::class, 'updateEmployeeWorkWeek'])
         ->name('work-arrangement.employee');
+    Route::get('/logs', [App\Http\Controllers\AdminController::class, 'logs'])
+        ->name('logs');
 });

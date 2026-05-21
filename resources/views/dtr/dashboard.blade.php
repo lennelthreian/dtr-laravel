@@ -30,6 +30,7 @@
         .slot-so { background:#e0f2fe; color:#075985; font-weight:600; }
         .slot-to { background:#d1fae5; color:#065f46; font-weight:600; }
         .slot-hd { background:#f3e8ff; color:#6b21a8; font-weight:600; }
+        .slot-leave { background:#f0fdf4; color:#166534; font-weight:600; }
         .hours-badge { display:inline-block; font-size:9px; background:var(--gray-100); color:var(--gray-600); padding:1px 5px; border-radius:3px; margin-top:2px; }
         .weekend { background:var(--gray-50) !important; }
         .weekend .day-num { color:var(--gray-400); }
@@ -75,6 +76,9 @@
                         <span>&#9881;</span> <span>Admin</span>
                     </a>
                 @endif
+                <a href="{{ route('profile') }}">
+                    <span>&#128100;</span> <span>My Profile</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
@@ -87,7 +91,44 @@
                     <h1 style="font-size:18px; color:var(--primary); margin:0;">Dashboard</h1>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <a href="{{ route('dtr.show', ['emp' => $employee->emp_code ?? '', 'month' => $month, 'year' => $year]) }}" class="btn btn-primary btn-sm">View Full DTR</a>
+                    @if ($employee)<a href="{{ route('dtr.show', ['emp' => $employee->emp_code, 'month' => $month, 'year' => $year]) }}" class="btn btn-primary btn-sm">View Full DTR</a>@endif
+                    @php $unread = $currentUser->unreadNotifications; @endphp
+                    <div class="notif-pos">
+                        <button class="notif-btn" onclick="toggleNotif()">&#128276;
+                            @if ($unread->count() > 0)
+                                <span class="notif-badge">{{ $unread->count() }}</span>
+                            @endif
+                        </button>
+                        <div id="notifDropdown" class="notif-dropdown">
+                            <div class="notif-header">Notifications</div>
+                            @forelse ($unread as $notif)
+                                @if ($notif->data['type'] === 'edit_request_submitted')
+                                    <a href="{{ route('supervisor.pending') }}" class="notif-item">
+                                @else
+                                    @php
+                                        $d = $notif->data['target_date'] ?? null;
+                                        $m = $d ? date('n', strtotime($d)) : date('n');
+                                        $y = $d ? date('Y', strtotime($d)) : date('Y');
+                                        $ec = $notif->data['emp_code'] ?? '';
+                                    @endphp
+                                    <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item">
+                                @endif
+                                    <strong>{{ $notif->data['message'] }}</strong>
+                                    <div class="notif-time">{{ $notif->created_at->diffForHumans() }}</div>
+                                </a>
+                            @empty
+                                <div style="padding:24px; text-align:center; color:var(--gray-500); font-size:13px;">No new notifications</div>
+                            @endforelse
+                            @if ($unread->count() > 0)
+                                <div class="notif-footer">
+                                    <form method="POST" action="{{ route('notifications.mark-read') }}">
+                                        @csrf
+                                        <button type="submit" style="background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer;">Mark all as read</button>
+                                    </form>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                     <form method="POST" action="{{ route('logout') }}" class="logout-corner" style="margin:0;">
                         @csrf
                         <button class="btn btn-outline btn-sm">Logout</button>
@@ -153,12 +194,14 @@
                                         $pi = $d['pm_in'] ?? '';
                                         $po = $d['pm_out'] ?? '';
                                         $th = $d['total_hours'] ?? '';
+                                        $isWholeDayLeave = $ai === 'ON LEAVE' && $pi === 'ON LEAVE';
                                         $typeClass = '';
                                         $typeLabel = '';
                                         if ($isHoliday) { $typeClass = 'slot-holiday'; $typeLabel = 'Holiday'; }
                                         elseif ($isWs) { $typeClass = 'slot-suspension'; $typeLabel = 'Suspension'; }
                                         elseif (strpos($remarks, 'WFH') !== false) { $typeClass = 'slot-wfh'; $typeLabel = 'WFH'; }
                                         elseif (strpos($remarks, 'Absent') !== false) { $typeClass = 'slot-absent'; $typeLabel = 'Absent'; }
+                                        elseif ($isWholeDayLeave) { $typeClass = 'slot-leave'; $typeLabel = 'On Leave'; }
                                         elseif (strpos($remarks, 'Halfday') !== false) { $typeClass = 'slot-hd'; $typeLabel = $remarks; }
                                         elseif (strpos($remarks, 'LS:') !== false) { $typeClass = 'slot-ls'; $typeLabel = 'LS'; }
                                         elseif (!empty($d['so_number'])) { $typeClass = 'slot-so'; $typeLabel = 'SO'; }
@@ -208,6 +251,7 @@
                         <span class="legend-item"><span class="legend-swatch" style="background:#fce7f3;"></span> Work Suspension</span>
                         <span class="legend-item"><span class="legend-swatch" style="background:#fef3c7;"></span> WFH</span>
                         <span class="legend-item"><span class="legend-swatch" style="background:#fee2e2;"></span> Absent</span>
+                        <span class="legend-item"><span class="legend-swatch" style="background:#f0fdf4;border:2px solid #166534;"></span> On Leave</span>
                         <span class="legend-item"><span class="legend-swatch" style="background:#e0e7ff;"></span> Locator Slip</span>
                         <span class="legend-item"><span class="legend-swatch" style="background:#e0f2fe;"></span> Special Order</span>
                         <span class="legend-item"><span class="legend-swatch" style="background:#d1fae5;"></span> Travel Order</span>
@@ -242,6 +286,31 @@
             var btn = document.getElementById('themeToggle');
             if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
         })();
+
+        function toggleNotif() {
+            var d = document.getElementById('notifDropdown');
+            d.classList.toggle('active');
+            if (d.classList.contains('active')) {
+                var badge = document.querySelector('.notif-badge');
+                if (badge) {
+                    fetch('{{ route("notifications.mark-read") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                        }
+                    }).then(function() {
+                        badge.remove();
+                    });
+                }
+            }
+        }
+        document.addEventListener('click', function(e) {
+            var d = document.getElementById('notifDropdown');
+            if (!e.target.closest('#notifDropdown') && !e.target.closest('.notif-btn')) {
+                d.classList.remove('active');
+            }
+        });
     </script>
 </body>
 </html>

@@ -37,6 +37,9 @@
                         <span>&#9881;</span> <span>Admin</span>
                     </a>
                 @endif
+                <a href="{{ route('profile') }}">
+                    <span>&#128100;</span> <span>My Profile</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button onclick="toggleTheme()" class="btn btn-sm" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px; width:100%; margin-bottom:8px;" id="themeToggle">Dark Mode</button>
@@ -147,8 +150,9 @@
                                                 'holiday' => 'Holiday',
                                                 'on_leave' => 'On Leave',
                                                 'wfh' => 'WFH',
-                                                'special_order' => 'Special Order',
-                                                'travel_order' => 'Travel Order',
+                    'special_order' => 'Special Order',
+                    'travel_order' => 'Travel Order',
+                    'official_business' => 'Official Business',
                                                 'work_suspension' => 'Work Suspension',
                                                 'locator_slip' => 'Locator Slip',
                                             ];
@@ -166,7 +170,7 @@
                                                 $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
                                                 $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
                                                 $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
-                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'official_business']) && $req->new_value && $req->new_value !== 'whole_day') {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                                 if ($req->new_value === 'am') $details .= ' (AM)';
                                                 elseif ($req->new_value === 'pm') $details .= ' (PM)';
@@ -223,8 +227,9 @@
                                                 'holiday' => 'Holiday',
                                                 'on_leave' => 'On Leave',
                                                 'wfh' => 'WFH',
-                                                'special_order' => 'Special Order',
-                                                'travel_order' => 'Travel Order',
+                    'special_order' => 'Special Order',
+                    'travel_order' => 'Travel Order',
+                    'official_business' => 'Official Business',
                                                 'work_suspension' => 'Work Suspension',
                                                 'locator_slip' => 'Locator Slip',
                                             ];
@@ -242,7 +247,7 @@
                                                 $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
                                                 $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
                                                 $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
-                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'official_business']) && $req->new_value && $req->new_value !== 'whole_day') {
                                                 $details = $typeLabels[$req->type] ?? $req->type;
                                                 if ($req->new_value === 'am') $details .= ' (AM)';
                                                 elseif ($req->new_value === 'pm') $details .= ' (PM)';
@@ -295,6 +300,7 @@
                         <option value="wfh">Work From Home (WFH)</option>
                         <option value="special_order">Special Order</option>
                         <option value="travel_order">Travel Order</option>
+                        <option value="official_business">Official Business</option>
                         <option value="locator_slip">Locator Slip</option>
                     </select>
                 </div>
@@ -361,6 +367,27 @@
                     </div>
                 </div>
 
+                <div id="obFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Official Business Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ob_type" value="whole_day" checked> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ob_type" value="am"> AM
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="ob_type" value="pm"> PM
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_ob_number">Official Business No.</label>
+                        <input type="text" name="ob_number" id="modal_ob_number" placeholder="e.g. OB-2024-001" class="form-control">
+                    </div>
+                </div>
+
                 <div id="dateRangeFields" style="display:none;">
                     <div class="form-row">
                         <div class="form-group">
@@ -410,8 +437,22 @@
 
                 <div id="onLeaveFields" style="display:none;">
                     <div class="form-group">
+                        <label>Leave Type</label>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 0;">
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="leave_type" value="whole_day" checked onchange="updateLeaveHours()"> Whole Day
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="leave_type" value="am" onchange="updateLeaveHours()"> Halfday (AM)
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="leave_type" value="pm" onchange="updateLeaveHours()"> Halfday (PM)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="modal_leave_hours">Leave Hours</label>
-                        <input type="number" name="leave_hours" id="modal_leave_hours" min="0.5" max="24" step="0.5" placeholder="e.g. 8" class="form-control" style="width:140px;">
+                        <input type="number" name="leave_hours" id="modal_leave_hours" min="0.5" max="24" step="0.5" value="8" class="form-control" style="width:140px;">
                     </div>
                 </div>
 
@@ -504,7 +545,16 @@
             document.getElementById('modal_ls_time_returned').value = '';
             document.querySelector('input[name="ls_no_return"][value="0"]').checked = true;
             document.getElementById('lsReturnFields').style.display = 'block';
-            document.getElementById('modal_leave_hours').value = '';
+            document.querySelector('input[name="leave_type"][value="whole_day"]').checked = true;
+            document.getElementById('modal_leave_hours').value = '8';
+            updateLeaveHours();
+        }
+
+        function updateLeaveHours() {
+            var type = document.querySelector('input[name="leave_type"]:checked');
+            if (type) {
+                document.getElementById('modal_leave_hours').value = type.value === 'whole_day' ? '8' : '4';
+            }
         }
 
         function toggleNoReturn() {
@@ -521,6 +571,7 @@
             var tcFields = document.getElementById('timeCorrectionFields');
             var soFields = document.getElementById('soFields');
             var toFields = document.getElementById('toFields');
+            var obFields = document.getElementById('obFields');
             var absentFields = document.getElementById('absentFields');
             var wfhFields = document.getElementById('wfhFields');
             var onLeaveFields = document.getElementById('onLeaveFields');
@@ -535,6 +586,7 @@
             tcFields.style.display = 'none';
             soFields.style.display = 'none';
             toFields.style.display = 'none';
+            obFields.style.display = 'none';
             absentFields.style.display = 'none';
             wfhFields.style.display = 'none';
             onLeaveFields.style.display = 'none';
@@ -569,6 +621,12 @@
                 reasonLabel.textContent = 'Title of Activity';
                 reasonInput.placeholder = 'Enter the title of activity';
                 document.getElementById('modal_to_number').required = true;
+            } else if (type === 'official_business') {
+                obFields.style.display = 'block';
+                dateRangeFields.style.display = 'block';
+                modalDayLabel.style.display = 'none';
+                reasonLabel.textContent = 'Title of Activity';
+                reasonInput.placeholder = 'Enter the title of activity';
             } else if (type === 'on_leave') {
                 onLeaveFields.style.display = 'block';
             } else if (type === 'locator_slip') {

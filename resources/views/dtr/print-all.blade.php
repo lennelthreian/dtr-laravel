@@ -15,34 +15,11 @@
         .employee-divider { page-break-before: always; }
         .no-print { display: block; }
         @media print {
-            [data-theme="dark"] {
-                --gray-50: #f8f9fa;
-                --gray-100: #f0f2f5;
-                --gray-200: #e9ecef;
-                --gray-300: #dee2e6;
-                --gray-400: #ced4da;
-                --gray-500: #adb5bd;
-                --gray-600: #6c757d;
-                --gray-700: #495057;
-                --gray-800: #343a40;
-                --gray-900: #212529;
-                --white: #ffffff;
-                --primary: #2d5a27;
-                --primary-light: #3d7a35;
-                --primary-dark: #1e401a;
-                --accent: #1a6b1a;
-                --accent-light: #228b22;
-                --danger: #c0392b;
-                --danger-light: #e74c3c;
-                --warning: #f39c12;
-                --warning-bg: #fff8e1;
-            }
-            body { padding: 0; }
             .no-print { display: none !important; }
             .employee-divider { page-break-before: always; }
-            .dtr-cols { gap: 0; justify-content: center; }
-            .dtr-half { flex: none; border: none; padding: 0; }
-            .dtr-half:last-child { margin-left: 60px; }
+            .dtr-cols { gap: 16px; justify-content: center; }
+            .dtr-half { flex: 1; border: none; padding: 0; min-width: 0; }
+            .dtr-half:last-child { margin-left: 0; }
         }
     </style>
 </head>
@@ -65,7 +42,7 @@
             foreach ($item['dtrData'] as $dayNum => $day) {
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
                 $dayMaxDow = isset($day['work_week_type']) ? ($day['work_week_type'] === '4-day' ? 4 : 5) : ($empDefaultWW === '4-day' ? 4 : 5);
-                if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
+                if (!empty($day['has_punch']) && $dow <= $dayMaxDow && empty($day['is_holiday']) && empty($day['is_work_suspension'])) {
                     $presentDays++;
                     if (!empty($day['total_hours'])) {
                         $parts = explode(':', $day['total_hours']);

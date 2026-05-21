@@ -8,6 +8,8 @@ use App\Models\GlobalHoliday;
 use App\Models\Office;
 use App\Models\Section;
 use App\Models\User;
+use App\Models\UserLog;
+use App\Services\UserLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -150,6 +152,8 @@ class AdminController extends Controller
 
         $user->update(['password' => Hash::make('password')]);
 
+        app(UserLogService::class)->log(auth()->id(), 'update', "Password reset for {$employee->full_name}", User::class, $user->id);
+
         return redirect()->route('admin.employees')
             ->with('success', "Password for {$employee->full_name} reset to \"password\".");
     }
@@ -189,6 +193,8 @@ class AdminController extends Controller
                 'setting_value' => $relativePath,
             ]);
         }
+
+        app(UserLogService::class)->log(auth()->id(), 'update', 'System settings updated', DtrSetting::class, null);
 
         return redirect()->route('admin.settings')->with('success', 'Settings updated.');
     }
@@ -240,7 +246,7 @@ class AdminController extends Controller
         ]);
 
         GlobalHoliday::create($data);
-        $m = date('m', strtotime($data['target_date']));
+        $m = (int)date('m', strtotime($data['target_date']));
         $y = date('Y', strtotime($data['target_date']));
         Cache::forget('global_holidays.' . $y . '.' . $m);
 
@@ -250,7 +256,7 @@ class AdminController extends Controller
 
     public function deleteHoliday(GlobalHoliday $holiday)
     {
-        $month = $holiday->target_date->format('m');
+        $month = (int)$holiday->target_date->format('m');
         $year = $holiday->target_date->format('Y');
         $holiday->delete();
         Cache::forget('global_holidays.' . $year . '.' . $month);
@@ -283,5 +289,37 @@ class AdminController extends Controller
         $value = $data['default_work_week'] === 'default' ? null : $data['default_work_week'];
         $employee->update(['default_work_week' => $value]);
         return redirect()->route('admin.work-arrangement')->with('success', "{$employee->full_name} updated.");
+    }
+
+    public function logs(Request $request)
+    {
+        $query = UserLog::with('user');
+
+        if ($request->filled('action')) {
+            $query->byAction($request->action);
+        }
+
+        if ($request->filled('user_id')) {
+            $query->forUser($request->user_id);
+        }
+
+        if ($request->filled('entity_type')) {
+            $query->byEntity($request->entity_type);
+        }
+
+        if ($request->filled('from')) {
+            $query->where('created_at', '>=', $request->from);
+        }
+
+        if ($request->filled('to')) {
+            $query->where('created_at', '<=', $request->to . ' 23:59:59');
+        }
+
+        $logs = $query->latest('created_at')->paginate(50);
+
+        $actions = UserLog::select('action')->distinct()->orderBy('action')->pluck('action');
+        $users = User::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.logs', compact('logs', 'actions', 'users'));
     }
 }

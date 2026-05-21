@@ -4,13 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\LogsUserActivity;
 
 class DtrUser extends Model
 {
     use HasFactory;
+    use LogsUserActivity;
 
     protected $fillable = [
         'emp_code', 'first_name', 'last_name', 'middle_name',
+        'honorific_prefix', 'honorific_suffix',
         'position', 'sex', 'department', 'office', 'section', 'office_id', 'section_id',
         'employee_status', 'is_active', 'default_work_week',
     ];
@@ -33,6 +36,11 @@ class DtrUser extends Model
     {
         $middle = $this->middle_name ? ' ' . strtoupper(substr($this->middle_name, 0, 1)) . '.' : '';
         $name = trim($this->first_name . $middle . ' ' . $this->last_name);
-        return $name ?: 'Employee #' . $this->emp_code;
+        if ($name) {
+            $prefix = $this->honorific_prefix ? $this->honorific_prefix . ' ' : '';
+            $suffix = $this->honorific_suffix ? ', ' . $this->honorific_suffix : '';
+            return $prefix . $name . $suffix;
+        }
+        return 'Employee #' . $this->emp_code;
     }
 }
