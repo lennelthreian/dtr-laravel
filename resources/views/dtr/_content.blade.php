@@ -137,31 +137,31 @@
                         <td class="time-col edited-val" colspan="4" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
                     @elseif ($amSo)
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
-                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
-                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
                     @elseif ($pmSo)
-                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
-                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] ?? '' }}</td>
                     @elseif ($amTo && $pmTo)
                         <td class="time-col edited-val" colspan="4" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
                     @elseif ($amTo)
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
-                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
-                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
                     @elseif ($pmTo)
-                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
-                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">TO: {{ $dtrData[$d]['to_number'] ?? '' }}</td>
                     @elseif ($amOb && $pmOb)
                         <td class="time-col edited-val" colspan="4" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
                     @elseif ($amOb)
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
-                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
-                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
                     @elseif ($pmOb)
-                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
-                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
                         <td class="time-col edited-val" colspan="2" style="text-align:center;">OB: {{ $dtrData[$d]['ob_number'] ?? '' }}</td>
                     @elseif ($amAbsent && $pmAbsent)
                         <td class="time-col has-val" colspan="4" style="text-align:center;">ABSENT</td>
@@ -184,10 +184,10 @@
                         <td class="time-col{{ empty($ao) ? ' no-entry' : ' has-val' }}">{{ $ao }}</td>
                         <td class="time-col has-val" colspan="2" style="text-align:center;">WFH</td>
                     @else
-                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
-                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
-                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
-                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) || ($edited && empty($editedFields)) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
+                        <td class="time-col{{ empty($ai) ? ' no-entry' : (in_array('am_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ai }}</td>
+                        <td class="time-col{{ empty($ao) ? ' no-entry' : (in_array('am_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $ao }}</td>
+                        <td class="time-col{{ empty($pi) ? ' no-entry' : (in_array('pm_in', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $pi }}</td>
+                        <td class="time-col{{ empty($po) ? ' no-entry' : (in_array('pm_out', $editedFields) ? ' edited-val' : ' has-val') }}">{{ $po }}</td>
                     @endif
                     <td class="hours-col">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>

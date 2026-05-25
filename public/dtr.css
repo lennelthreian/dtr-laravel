@@ -482,10 +482,7 @@ tbody tr:last-child td { border-bottom: none; }
 .has-val { background: #d4edda; }
 .no-entry { background: #fdd !important; }
 .edited-val { background: #fff3cd; font-weight: 700; color: var(--accent); }
-tr.edited { background: #fff3cd; }
-tr.edited .has-val, tr.edited .hours-col, tr.edited .remarks-col { background: transparent; }
-[data-theme="dark"] tr.edited { background: #3d3a1a; }
-[data-theme="dark"] tr.edited .has-val, [data-theme="dark"] tr.edited .hours-col, [data-theme="dark"] tr.edited .remarks-col { background: transparent; }
+
 .hours-col { font-family: Arial, sans-serif; font-weight: 600; width: 36px; font-size: 11px; color: var(--accent); }
 .remarks-col { font-size: 9px; color: var(--danger); width: 50px; }
 .edited-badge {

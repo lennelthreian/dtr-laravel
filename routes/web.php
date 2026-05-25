@@ -13,6 +13,12 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
         ->name('login');
     Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+    Route::get('/forgot-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showForm'])
+        ->name('password.request');
+    Route::post('/forgot-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'store'])
+        ->name('password.request.store');
+    Route::get('/forgot-password/submitted', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'submitted'])
+        ->name('password.request.submitted');
 });
 
 Route::post('/logout', [App\Http\Controllers\Auth\LogoutController::class, 'store'])
@@ -114,4 +120,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('work-arrangement.employee');
     Route::get('/logs', [App\Http\Controllers\AdminController::class, 'logs'])
         ->name('logs');
+    Route::get('/password-reset-requests', [App\Http\Controllers\AdminController::class, 'passwordResetRequests'])
+        ->name('password-reset-requests');
+    Route::post('/password-reset-requests/{resetRequest}/reset', [App\Http\Controllers\AdminController::class, 'approvePasswordReset'])
+        ->name('password-reset-requests.reset');
 });

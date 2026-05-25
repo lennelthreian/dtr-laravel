@@ -6,6 +6,7 @@ use App\Models\DtrSetting;
 use App\Models\DtrUser;
 use App\Models\GlobalHoliday;
 use App\Models\Office;
+use App\Models\PasswordResetRequest;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\UserLog;
@@ -321,5 +322,39 @@ class AdminController extends Controller
         $users = User::orderBy('name')->get(['id', 'name']);
 
         return view('admin.logs', compact('logs', 'actions', 'users'));
+    }
+
+    public function passwordResetRequests()
+    {
+        $pending = PasswordResetRequest::where('status', 'pending')
+            ->with('user')
+            ->latest()
+            ->get();
+
+        $resolved = PasswordResetRequest::where('status', 'reset')
+            ->with('user')
+            ->latest()
+            ->get();
+
+        return view('admin.password-reset-requests', compact('pending', 'resolved'));
+    }
+
+    public function approvePasswordReset(PasswordResetRequest $resetRequest)
+    {
+        if ($resetRequest->status !== 'pending') {
+            return redirect()->route('admin.password-reset-requests')
+                ->with('error', 'This request has already been resolved.');
+        }
+
+        $user = $resetRequest->user;
+
+        $user->update(['password' => Hash::make('password')]);
+
+        $resetRequest->update(['status' => 'reset']);
+
+        app(UserLogService::class)->log(auth()->id(), 'update', "Password reset request approved for {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.password-reset-requests')
+            ->with('success', "Password for {$user->name} reset to \"password\".");
     }
 }

@@ -19,6 +19,9 @@
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
+        <div style="text-align:right;margin-bottom:12px;">
+            <a href="{{ route('password.request') }}" style="font-size:12px;color:var(--accent);">Forgot Password?</a>
+        </div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Login</button>
         <div class="auth-link">
             Don't have an account? <a href="{{ route('register') }}">Register</a>
