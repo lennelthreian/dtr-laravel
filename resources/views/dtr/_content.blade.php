@@ -217,8 +217,12 @@
 
 @php
     $totalHoursFormatted = sprintf('%02d:%02d', floor($totalMinutes / 60), $totalMinutes % 60);
-    $totalLateFormatted = sprintf('%02d:%02d', floor($totalLate / 60), $totalLate % 60);
-    $totalUndertimeFormatted = sprintf('%02d:%02d', floor($totalUndertime / 60), $totalUndertime % 60);
+    $totalLateHrs = floor($totalLate / 60);
+    $totalLateMins = $totalLate % 60;
+    $totalLateFormatted = ($totalLateHrs ? "{$totalLateHrs} hr(s) " : '') . "{$totalLateMins} min(s)";
+    $totalUtHrs = floor($totalUndertime / 60);
+    $totalUtMins = $totalUndertime % 60;
+    $totalUndertimeFormatted = ($totalUtHrs ? "{$totalUtHrs} hr(s) " : '') . "{$totalUtMins} min(s)";
 @endphp
 
 <table class="dtr-table" style="margin-top:0; border-top:none;">

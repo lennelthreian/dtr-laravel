@@ -49,7 +49,7 @@
                         $totalMin += (int) $parts[0] * 60 + (int) $parts[1];
                     }
                     if (!empty($day['remarks']) && strpos($day['remarks'], 'Late:') !== false) {
-                        preg_match_all('/(\d+):(\d+)/', $day['remarks'], $m);
+                        preg_match_all('/(?:AM|PM)\s+(\d+):(\d+)/', $day['remarks'], $m);
                         for ($i = 0; $i < count($m[0]); $i++) {
                             $totalLate += (int) $m[1][$i] * 60 + (int) $m[2][$i];
                         }

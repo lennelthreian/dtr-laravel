@@ -168,6 +168,31 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
                                 break;
+                            case 'on_leave':
+                                $leaveField = $edit->field ?: 'whole_day';
+                                if ($leaveField === 'am') {
+                                    $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
+                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                } elseif ($leaveField === 'pm') {
+                                    $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' : 'On Leave (PM)');
+                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                } else {
+                                    $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                                    $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' : 'On Leave');
+                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                                }
+                                $dtrData[$dayNum]['has_punch'] = true;
+                                break;
                             case 'holiday':
                                 $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Holiday' : 'Holiday';
                                 $dtrData[$dayNum]['has_punch'] = true;
@@ -350,9 +375,15 @@ class DtrController extends Controller
 
                         if (in_array($edit->type, ['time_correction', 'halfday_am', 'halfday_pm'])) {
                             $day = $dtrData[$dayNum];
+                            $hasSo = !empty($day['so_number']);
+                            $hasTo = !empty($day['to_number']);
+                            $hasOb = !empty($day['ob_number']);
+                            $isOnLeave = ($day['am_in'] ?? '') === 'ON LEAVE' || ($day['pm_in'] ?? '') === 'ON LEAVE';
                             if ($edit->type === 'time_correction') {
                                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
-                                $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                                if (!$hasSo && !$hasTo && !$hasOb && !$isOnLeave) {
+                                    $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                                }
                             } else {
                                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
                             }
@@ -423,7 +454,7 @@ class DtrController extends Controller
                         if (!isset($day['work_week_type'])) continue;
                         $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                        $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0));
+                        $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                         if (!$isSpecial) {
                             $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
@@ -432,6 +463,8 @@ class DtrController extends Controller
                         if ($isSpecial) {
                             if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
                                 // LS total_hours already set by LS case block
+                            } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
+                                // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                             } else {
                                 $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
                                 if ($isHalfday) {
@@ -458,15 +491,15 @@ class DtrController extends Controller
                     $this->recomputeHalfdayHours($dtrData, $employee, $settings);
 
                     foreach ($dtrData as $dayNum => &$day) {
-                        if (!isset($day['work_week_type'])) continue;
-                        $expectedMins = $day['work_week_type'] === '4-day' ? 600 : 480;
+                        $ww = $day['work_week_type'] ?? $empDefaultWW;
+                        $expectedMins = $ww === '4-day' ? 600 : 480;
                         $totalMins = 0;
                         if (!empty($day['total_hours'])) {
                             $parts = explode(':', $day['total_hours']);
                             $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                         }
                         $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
-                        $remarks = trim(preg_replace('/\s*\|\s*UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
+                        $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                         $parts = [];
                         if ($remarks !== '') $parts[] = $remarks;
                         if ($utMins > 0) $parts[] = 'UT: ' . gmdate('H:i', $utMins * 60);
@@ -489,7 +522,7 @@ class DtrController extends Controller
                                 $totalMinutes += (int) $parts[0] * 60 + (int) $parts[1];
                             }
                             if (!empty($day['remarks']) && strpos($day['remarks'], 'Late:') !== false) {
-                                preg_match_all('/(\d+):(\d+)/', $day['remarks'], $m);
+                                preg_match_all('/(?:AM|PM)\s+(\d+):(\d+)/', $day['remarks'], $m);
                                 for ($i = 0; $i < count($m[0]); $i++) {
                                     $totalLate += (int) $m[1][$i] * 60 + (int) $m[2][$i];
                                 }
@@ -630,6 +663,31 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Halfday (PM)' : 'Halfday (PM)';
                     $dtrData[$dayNum]['has_punch'] = true;
                     $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                    break;
+                case 'on_leave':
+                    $leaveField = $edit->field ?: 'whole_day';
+                    if ($leaveField === 'am') {
+                        $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
+                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                    } elseif ($leaveField === 'pm') {
+                        $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' : 'On Leave (PM)');
+                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                    } else {
+                        $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' : 'On Leave');
+                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                    }
+                    $dtrData[$dayNum]['has_punch'] = true;
                     break;
                 case 'holiday':
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Holiday' : 'Holiday';
@@ -858,9 +916,15 @@ class DtrController extends Controller
             if (!in_array($edit->type, ['time_correction', 'halfday_am', 'halfday_pm'])) continue;
             $dayNum = (int) $edit->target_date->format('j');
             $day = $dtrData[$dayNum];
+            $hasSo = !empty($day['so_number']);
+            $hasTo = !empty($day['to_number']);
+            $hasOb = !empty($day['ob_number']);
+            $isOnLeave = ($day['am_in'] ?? '') === 'ON LEAVE' || ($day['pm_in'] ?? '') === 'ON LEAVE';
             if ($edit->type === 'time_correction') {
                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
-                $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                if (!$hasSo && !$hasTo && !$hasOb && !$isOnLeave) {
+                    $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                }
             } else {
                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
             }
@@ -890,7 +954,7 @@ class DtrController extends Controller
             if (!isset($day['work_week_type'])) continue;
             $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-            $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0));
+            $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
             if (!$isSpecial) {
                 $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
@@ -899,6 +963,8 @@ class DtrController extends Controller
             if ($isSpecial) {
                 if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
                     // LS total_hours already set by LS case block
+                } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
+                    // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                 } else {
                     $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
                     if ($isHalfday) {
@@ -925,15 +991,15 @@ class DtrController extends Controller
         $this->recomputeHalfdayHours($dtrData, $employee, $settings);
 
         foreach ($dtrData as $dayNum => &$day) {
-            if (!isset($day['work_week_type'])) continue;
-            $expectedMins = $day['work_week_type'] === '4-day' ? 600 : 480;
+            $ww = $day['work_week_type'] ?? $empDefaultWW;
+            $expectedMins = $ww === '4-day' ? 600 : 480;
             $totalMins = 0;
             if (!empty($day['total_hours'])) {
                 $parts = explode(':', $day['total_hours']);
                 $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
             }
             $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
-            $remarks = trim(preg_replace('/\s*\|\s*UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
+            $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
             $parts = [];
             if ($remarks !== '') $parts[] = $remarks;
             if ($utMins > 0) $parts[] = 'UT: ' . gmdate('H:i', $utMins * 60);
@@ -956,7 +1022,7 @@ class DtrController extends Controller
                     $totalMinutes += (int) $parts[0] * 60 + (int) $parts[1];
                 }
                 if (!empty($day['remarks']) && strpos($day['remarks'], 'Late:') !== false) {
-                    preg_match_all('/(\d+):(\d+)/', $day['remarks'], $m);
+                    preg_match_all('/(?:AM|PM)\s+(\d+):(\d+)/', $day['remarks'], $m);
                     for ($i = 0; $i < count($m[0]); $i++) {
                         $totalLate += (int) $m[1][$i] * 60 + (int) $m[2][$i];
                     }
@@ -1080,6 +1146,31 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
                         $dtrData[$dayNum]['has_punch'] = true;
                         $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        break;
+                    case 'on_leave':
+                        $leaveField = $edit->field ?: 'whole_day';
+                        if ($leaveField === 'am') {
+                            $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
+                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        } elseif ($leaveField === 'pm') {
+                            $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)';
+                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        } else {
+                            $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
+                            $dtrData[$dayNum]['remarks'] = 'On Leave';
+                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        }
+                        $dtrData[$dayNum]['has_punch'] = true;
                         break;
                     case 'holiday':
                         $dtrData[$dayNum]['remarks'] = 'Holiday';
@@ -1236,7 +1327,7 @@ class DtrController extends Controller
                 if (!isset($day['work_week_type'])) continue;
                 $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0));
+                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                 if (!$isSpecial) {
                     $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
@@ -1245,6 +1336,8 @@ class DtrController extends Controller
                 if ($isSpecial) {
                     if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
                         // LS total_hours already set by LS case block
+                    } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
+                        // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                     } else {
                         $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
                         if ($isHalfday) {
@@ -1269,15 +1362,15 @@ class DtrController extends Controller
             $this->recomputeHalfdayHours($dtrData, $employee, $settings);
 
             foreach ($dtrData as $dayNum => &$day) {
-                if (!isset($day['work_week_type'])) continue;
-                $expectedMins = $day['work_week_type'] === '4-day' ? 600 : 480;
+                $ww = $day['work_week_type'] ?? $empDefaultWW;
+                $expectedMins = $ww === '4-day' ? 600 : 480;
                 $totalMins = 0;
                 if (!empty($day['total_hours'])) {
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
                 $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
-                $remarks = trim(preg_replace('/\s*\|\s*UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
+                $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
                 if ($utMins > 0) $parts[] = 'UT: ' . gmdate('H:i', $utMins * 60);
@@ -1446,6 +1539,31 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['has_punch'] = true;
                         $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
                         break;
+                    case 'on_leave':
+                        $leaveField = $edit->field ?: 'whole_day';
+                        if ($leaveField === 'am') {
+                            $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
+                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        } elseif ($leaveField === 'pm') {
+                            $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
+                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)';
+                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        } else {
+                            $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                            $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
+                            $dtrData[$dayNum]['remarks'] = 'On Leave';
+                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        }
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        break;
                     case 'holiday':
                         $dtrData[$dayNum]['remarks'] = 'Holiday';
                         $dtrData[$dayNum]['has_punch'] = true;
@@ -1560,9 +1678,15 @@ class DtrController extends Controller
                 if (!in_array($edit->type, ['time_correction', 'halfday_am', 'halfday_pm'])) continue;
                 $dayNum = (int) $edit->target_date->format('j');
                 $day = $dtrData[$dayNum];
+                $hasSo = !empty($day['so_number']);
+                $hasTo = !empty($day['to_number']);
+                $hasOb = !empty($day['ob_number']);
+                $isOnLeave = ($day['am_in'] ?? '') === 'ON LEAVE' || ($day['pm_in'] ?? '') === 'ON LEAVE';
                 if ($edit->type === 'time_correction') {
                     $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
-                    $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                    if (!$hasSo && !$hasTo && !$hasOb && !$isOnLeave) {
+                        $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
+                    }
                 } else {
                     $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
                 }
@@ -1630,7 +1754,7 @@ class DtrController extends Controller
                 if (!isset($day['work_week_type'])) continue;
                 $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0));
+                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                 if (!$isSpecial) {
                     $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
@@ -1639,6 +1763,8 @@ class DtrController extends Controller
                 if ($isSpecial) {
                     if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
                         // LS total_hours already set by LS case block
+                    } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
+                        // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                     } else {
                         $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
                         if ($isHalfday) {
@@ -1665,15 +1791,15 @@ class DtrController extends Controller
             $this->recomputeHalfdayHours($dtrData, $employee, $settings);
 
             foreach ($dtrData as $dayNum => &$day) {
-                if (!isset($day['work_week_type'])) continue;
-                $expectedMins = $day['work_week_type'] === '4-day' ? 600 : 480;
+                $ww = $day['work_week_type'] ?? $empDefaultWW;
+                $expectedMins = $ww === '4-day' ? 600 : 480;
                 $totalMins = 0;
                 if (!empty($day['total_hours'])) {
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
                 $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
-                $remarks = trim(preg_replace('/\s*\|\s*UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
+                $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
                 if ($utMins > 0) $parts[] = 'UT: ' . gmdate('H:i', $utMins * 60);
@@ -2221,7 +2347,7 @@ class DtrController extends Controller
             }
 
             $ww = $day['work_week_type'] ?? $empDefaultWW;
-            $halfdayMinutes = $ww === '4-day' ? 300 : 240;
+            $halfdayMinutes = $day['leave_credit_minutes'] ?? ($ww === '4-day' ? 300 : 240);
 
             if (strpos($day['remarks'] ?? '', '(AM)') !== false) {
                 $punchMinutes = $this->computePunchMinutes($day['pm_in'] ?? '', $day['pm_out'] ?? '');

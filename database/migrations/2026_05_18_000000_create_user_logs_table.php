@@ -9,7 +9,7 @@ class CreateUserLogsTable extends Migration
     public function up()
     {
         Schema::create('user_logs', function (Blueprint $table) {
-            $table->id();
+            $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('action', 50);
             $table->string('entity_type', 100)->nullable();
