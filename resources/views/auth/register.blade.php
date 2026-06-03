@@ -7,28 +7,28 @@
         @csrf
         <div class="form-group">
             <label for="first-name">First Name</label>
-            <input id="first-name" type="text" name="first_name" value="{{ old('first_name') }}" required autofocus class="form-control">
+            <input id="first-name" type="text" name="first_name" value="{{ old('first_name') }}" required autofocus placeholder="Enter your first name" class="form-control">
             @error('first_name')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
         <div class="form-group">
             <label for="middle-name">Middle Name</label>
-            <input id="middle-name" type="text" name="middle_name" value="{{ old('middle_name') }}" class="form-control">
+            <input id="middle-name" type="text" name="middle_name" value="{{ old('middle_name') }}" placeholder="Enter your middle name" class="form-control">
             @error('middle_name')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
         <div class="form-group">
             <label for="last-name">Last Name</label>
-            <input id="last-name" type="text" name="last_name" value="{{ old('last_name') }}" required class="form-control">
+            <input id="last-name" type="text" name="last_name" value="{{ old('last_name') }}" required placeholder="Enter your last name" class="form-control">
             @error('last_name')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
         <div class="form-group">
-            <label for="emp-code">Employee Code</label>
-            <input id="emp-code" type="text" name="emp_code" value="{{ old('emp_code') }}" required placeholder="Enter your employee code" class="form-control">
+            <label for="emp-code">Biometrics ID</label>
+            <input id="emp-code" type="text" name="emp_code" value="{{ old('emp_code') }}" required placeholder="Enter Biometrics ID Provided by IT Staff" class="form-control">
             @error('emp_code')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
@@ -81,21 +81,21 @@
         </div>
         <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" type="email" name="email" value="{{ old('email') }}" required class="form-control">
+            <input id="email" type="email" name="email" value="{{ old('email') }}" required placeholder="Enter your email address" class="form-control">
             @error('email')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input id="password" type="password" name="password" required class="form-control">
+            <input id="password" type="password" name="password" required placeholder="Enter your password" class="form-control">
             @error('password')
                 <div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ $message }}</div>
             @enderror
         </div>
         <div class="form-group">
             <label for="password-confirm">Confirm Password</label>
-            <input id="password-confirm" type="password" name="password_confirmation" required class="form-control">
+            <input id="password-confirm" type="password" name="password_confirmation" required placeholder="Confirm your password" class="form-control">
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Register</button>
         <div class="auth-link">
