@@ -262,7 +262,6 @@
                             badge.textContent = count;
                         }
                     }
-                    item.remove();
                     window.location.href = url;
                 }).catch(function() {
                     window.location.href = url;

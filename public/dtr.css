@@ -77,10 +77,16 @@
 [data-theme="dark"] .dtr-page { background: var(--gray-50); }
 [data-theme="dark"] .dtr-table thead th { background: var(--gray-200); color: var(--gray-800); }
 [data-theme="dark"] .dtr-table tbody td { color: var(--gray-900); }
-[data-theme="dark"] .dtr-table tbody tr.weekend td { background: var(--gray-100); color: var(--gray-600); }
-[data-theme="dark"] .has-val { background: #1a3a1a; color: var(--gray-900); }
-[data-theme="dark"] .no-entry { background: #3d1a1a !important; color: var(--gray-900); }
-[data-theme="dark"] .edited-val { background: #3d3a1a; color: var(--gray-900); }
+[data-theme="dark"] .dtr-table tbody tr.weekend td { background: var(--gray-100); color: var(--gray-600); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .has-val { background: #1a3a1a; color: var(--gray-900); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .no-entry { background: #3d1a1a !important; color: var(--gray-900); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .edited-val { background: #3d3a1a; color: var(--gray-900); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited { background: #3d3a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited .has-val { background: #3d3a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited .no-entry { background: #3d3a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited .day-col { background: #3d3a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited .hours-col { background: #3d3a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-theme="dark"] .dtr-table tr.edited .remarks-col { background: #3d3a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 [data-theme="dark"] .dtr-summary { background: var(--gray-200); color: var(--gray-800); }
 [data-theme="dark"] .day-col .dow { color: var(--gray-600); }
 [data-theme="dark"] .day-col .ww-badge { background: var(--accent-light); }
@@ -471,7 +477,7 @@ tbody tr:last-child td { border-bottom: none; }
   letter-spacing: 0;
 }
 .dtr-table tbody td { border: 1px solid #000; padding: 3px 4px; font-size: 11px; text-align: center; }
-.dtr-table tbody tr.weekend td { background: var(--gray-100); color: var(--gray-500); }
+.dtr-table tbody tr.weekend td { background: var(--gray-100); color: var(--gray-500); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 .day-col { font-weight: 600; width: 30px; font-size: 11px; }
 .day-col .dow { display: block; font-size: 8px; font-weight: 400; color: var(--gray-500); text-transform: uppercase; }
@@ -479,9 +485,15 @@ tbody tr:last-child td { border-bottom: none; }
 .ww-clickable { cursor: pointer; transition: opacity 0.15s; }
 .ww-clickable:hover { opacity: 0.7; }
 .time-col { font-family: Arial, sans-serif; font-weight: 600; font-size: 11px; width: 42px; }
-.has-val { background: #d4edda; }
-.no-entry { background: #fdd !important; }
-.edited-val { background: #fff3cd; font-weight: 700; color: var(--accent); }
+.has-val { background: #d4edda; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.no-entry { background: #fdd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.edited-val { background: #fff3cd; font-weight: 700; color: var(--accent); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited { background: #fff3cd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited .has-val { background: #fff3cd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited .no-entry { background: #fff3cd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited .day-col { background: #fff3cd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited .hours-col { background: #fff3cd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.dtr-table tr.edited .remarks-col { background: #fff3cd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 .hours-col { font-family: Arial, sans-serif; font-weight: 600; width: 36px; font-size: 11px; color: var(--accent); }
 .remarks-col { font-size: 9px; color: var(--danger); width: 50px; }

@@ -654,15 +654,7 @@
             if (d.classList.contains('active')) {
                 var badge = document.querySelector('.notif-badge');
                 if (badge) {
-                    fetch('{{ route("notifications.mark-read") }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json',
-                        }
-                    }).then(function() {
-                        badge.remove();
-                    });
+                    badge.remove();
                 }
             }
         }
@@ -696,7 +688,6 @@
                             badge.textContent = count;
                         }
                     }
-                    item.remove();
                     window.location.href = url;
                 }).catch(function() {
                     window.location.href = url;
