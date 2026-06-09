@@ -37,6 +37,7 @@
                 <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.holidays') }}" class="active"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>

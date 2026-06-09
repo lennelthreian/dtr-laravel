@@ -47,6 +47,8 @@ Route::middleware('auth')->group(function () {
         ->name('dtr.edit-request.approve');
     Route::post('/dtr/edit-request/{edit_request}/reject', [App\Http\Controllers\DtrEditRequestController::class, 'reject'])
         ->name('dtr.edit-request.reject');
+    Route::delete('/dtr/edit-request/{edit_request}', [App\Http\Controllers\DtrEditRequestController::class, 'destroy'])
+        ->name('dtr.edit-request.destroy');
     Route::post('/dtr/edit-requests/batch-approve', [App\Http\Controllers\DtrEditRequestController::class, 'batchApprove'])
         ->name('dtr.edit-requests.batch-approve');
 
@@ -124,4 +126,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('password-reset-requests');
     Route::post('/password-reset-requests/{resetRequest}/reset', [App\Http\Controllers\AdminController::class, 'approvePasswordReset'])
         ->name('password-reset-requests.reset');
+    Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])
+        ->name('users');
+    Route::post('/users/{user}/toggle-super', [App\Http\Controllers\AdminController::class, 'toggleSuper'])
+        ->name('users.toggle-super');
 });

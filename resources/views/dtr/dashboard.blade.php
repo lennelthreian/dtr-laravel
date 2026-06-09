@@ -290,17 +290,41 @@
         function toggleNotif() {
             var d = document.getElementById('notifDropdown');
             d.classList.toggle('active');
-            if (d.classList.contains('active')) {
-                var badge = document.querySelector('.notif-badge');
-                if (badge) {
-                    badge.remove();
-                }
-            }
         }
         document.addEventListener('click', function(e) {
             var d = document.getElementById('notifDropdown');
             if (!e.target.closest('#notifDropdown') && !e.target.closest('.notif-btn')) {
                 d.classList.remove('active');
+            }
+        });
+        document.getElementById('notifDropdown') && document.getElementById('notifDropdown').addEventListener('click', function(e) {
+            var item = e.target.closest('.notif-item');
+            if (!item) return;
+            var notifId = item.getAttribute('data-notif-id');
+            if (notifId) {
+                e.preventDefault();
+                var url = item.getAttribute('href');
+                fetch('/notifications/' + notifId + '/mark-single-read', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                    }
+                }).then(function() {
+                    var badge = document.querySelector('.notif-badge');
+                    if (badge) {
+                        var count = parseInt(badge.textContent);
+                        count--;
+                        if (count <= 0) {
+                            badge.remove();
+                        } else {
+                            badge.textContent = count;
+                        }
+                    }
+                    window.location.href = url;
+                }).catch(function() {
+                    window.location.href = url;
+                });
             }
         });
     </script>

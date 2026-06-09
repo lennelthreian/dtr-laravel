@@ -91,6 +91,7 @@ class DtrController extends Controller
         $totalLate = null;
         $totalUndertime = null;
         $employee = null;
+        $approvedRequests = collect();
 
         if ($request->has('month') && $request->has('year')) {
             $empCode = $request->emp;
@@ -535,6 +536,8 @@ class DtrController extends Controller
                             }
                         }
                     }
+
+                    $approvedRequests = $approvedEdits->sortBy('target_date');
                 }
             }
         }
@@ -544,7 +547,8 @@ class DtrController extends Controller
         return view('dtr.index', compact(
             'employees', 'dtrData', 'month', 'year', 'monthName',
             'daysInMonth', 'presentDays', 'totalMinutes', 'totalLate',
-            'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor'
+            'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor',
+            'approvedRequests'
         ));
     }
 
@@ -1907,39 +1911,30 @@ class DtrController extends Controller
             $amInTS = strtotime($amIn);
             $pmOutTS = strtotime($pmOut);
             $totalMinutesWorked = ($pmOutTS - $amInTS) / 60;
-            $lunchBreak = 60;
-            if ($hasAmOut && $hasPmIn) {
-                $amOutTS = strtotime($amOut);
-                $pmInTS = strtotime($pmIn);
-                if ($pmInTS > $amOutTS) {
-                    $lunchBreak = ($pmInTS - $amOutTS) / 60;
-                    if ($lunchBreak > 180) $lunchBreak = 60;
-                }
-            }
-            $totalMin = $totalMinutesWorked - $lunchBreak;
-            if ($totalMin < 0) $totalMin = 0;
-            $hours = floor($totalMin / 60);
-            $mins = round($totalMin % 60);
+            $totalMins = (int)round($totalMinutesWorked - 60);
+            if ($totalMins < 0) $totalMins = 0;
+            $hours = floor($totalMins / 60);
+            $mins = $totalMins % 60;
             return sprintf('%02d:%02d', $hours, $mins);
         }
 
         if ($hasPmIn && $hasPmOut) {
             $pmInTS = strtotime($pmIn);
             $pmOutTS = strtotime($pmOut);
-            $totalMin = ($pmOutTS - $pmInTS) / 60;
-            if ($totalMin < 0) $totalMin = 0;
-            $hours = floor($totalMin / 60);
-            $mins = round($totalMin % 60);
+            $totalMins = (int)round(($pmOutTS - $pmInTS) / 60);
+            if ($totalMins < 0) $totalMins = 0;
+            $hours = floor($totalMins / 60);
+            $mins = $totalMins % 60;
             return sprintf('%02d:%02d', $hours, $mins);
         }
 
         if ($hasAmIn && $hasAmOut) {
             $amInTS = strtotime($amIn);
             $amOutTS = strtotime($amOut);
-            $totalMin = ($amOutTS - $amInTS) / 60;
-            if ($totalMin < 0) $totalMin = 0;
-            $hours = floor($totalMin / 60);
-            $mins = round($totalMin % 60);
+            $totalMins = (int)round(($amOutTS - $amInTS) / 60);
+            if ($totalMins < 0) $totalMins = 0;
+            $hours = floor($totalMins / 60);
+            $mins = $totalMins % 60;
             return sprintf('%02d:%02d', $hours, $mins);
         }
 
@@ -2105,15 +2100,10 @@ class DtrController extends Controller
             $totalMins = 0;
             if ($amIn && $pmOut) {
                 $totalMinutesWorked = ($pmOut - $amIn) / 60;
-                $lunchBreak = 60;
-                if ($amOut && $pmIn && $pmIn > $amOut) {
-                    $lunchBreak = ($pmIn - $amOut) / 60;
-                    if ($lunchBreak > 180) $lunchBreak = 60;
-                }
-                $totalMins = (int)($totalMinutesWorked - $lunchBreak);
+                $totalMins = (int)round($totalMinutesWorked - 60);
                 if ($totalMins < 0) $totalMins = 0;
                 $hours = floor($totalMins / 60);
-                $mins = round($totalMins % 60);
+                $mins = $totalMins % 60;
                 $totalHours = sprintf('%02d:%02d', $hours, $mins);
             } elseif ($amIn || $pmOut) {
                 $totalHours = '--:--';

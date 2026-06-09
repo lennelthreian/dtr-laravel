@@ -216,6 +216,22 @@ class DtrEditRequestController extends Controller
         return back()->with('success', 'Edit request rejected.');
     }
 
+    public function destroy(DtrEditRequest $editRequest)
+    {
+        $user = auth()->user();
+        $employee = DtrUser::where('emp_code', $user->emp_code)->first();
+
+        if (!$user->is_super) {
+            if (!$employee || $editRequest->employee_id !== $employee->id) {
+                abort(403, 'You can only delete your own edit requests.');
+            }
+        }
+
+        $editRequest->delete();
+
+        return back()->with('success', 'Edit request deleted.');
+    }
+
     public function markAsRead()
     {
         auth()->user()->unreadNotifications->markAsRead();

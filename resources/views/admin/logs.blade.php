@@ -22,6 +22,7 @@
                 <a href="{{ route('admin.offices') }}"><span>Manage Divisions</span></a>
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
+                <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
@@ -111,7 +112,7 @@
                     </table>
                 </div>
                 <div style="margin-top:16px;">
-                    {{ $logs->appends(request()->query())->links() }}
+                    {{ $logs->appends(request()->query())->links('vendor.pagination.default') }}
                 </div>
             </div>
         </div>

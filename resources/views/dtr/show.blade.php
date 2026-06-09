@@ -214,6 +214,9 @@
                                         <th>Type</th>
                                         <th>Details</th>
                                         <th>Reason</th>
+                                        @if ($isOwnDtr)
+                                            <th style="width:50px;"></th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -260,6 +263,15 @@
                                             <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
                                             <td>{!! $details !!}</td>
                                             <td style="max-width:200px;">{{ $req->reason }}</td>
+                                            @if ($isOwnDtr)
+                                                <td>
+                                                    <form method="POST" action="{{ route('dtr.edit-request.destroy', $req->id) }}" onsubmit="return confirm('Delete this approved edit request? This will revert the DTR back to its original value.');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:2px 6px;" title="Delete">&#10005;</button>
+                                                    </form>
+                                                </td>
+                                            @endif
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -651,12 +663,6 @@
         function toggleNotif() {
             var d = document.getElementById('notifDropdown');
             d.classList.toggle('active');
-            if (d.classList.contains('active')) {
-                var badge = document.querySelector('.notif-badge');
-                if (badge) {
-                    badge.remove();
-                }
-            }
         }
         document.addEventListener('click', function(e) {
             var d = document.getElementById('notifDropdown');

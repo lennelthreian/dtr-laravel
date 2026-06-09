@@ -339,6 +339,28 @@ class AdminController extends Controller
         return view('admin.password-reset-requests', compact('pending', 'resolved'));
     }
 
+    public function users()
+    {
+        $users = User::orderBy('name')->get();
+        return view('admin.users', compact('users'));
+    }
+
+    public function toggleSuper(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')
+                ->with('error', 'You cannot remove super admin privileges from yourself.');
+        }
+
+        $user->update(['is_super' => !$user->is_super]);
+
+        $action = $user->is_super ? 'granted' : 'removed';
+        app(UserLogService::class)->log(auth()->id(), 'update', "Super admin {$action} for {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "Super admin privileges {$action} for {$user->name}.");
+    }
+
     public function approvePasswordReset(PasswordResetRequest $resetRequest)
     {
         if ($resetRequest->status !== 'pending') {
