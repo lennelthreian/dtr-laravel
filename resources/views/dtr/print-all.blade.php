@@ -20,12 +20,7 @@
             .dtr-cols { gap: 16px; justify-content: center; }
             .dtr-half { flex: 1; border: none; padding: 0; min-width: 0; }
             .dtr-half:last-child { margin-left: 0; }
-            .has-val, .no-entry, .edited-val, .dtr-table tr.edited,
-            .dtr-table tr.edited .has-val,
-            .dtr-table tr.edited .no-entry,
-            .dtr-table tr.edited .day-col,
-            .dtr-table tr.edited .hours-col,
-            .dtr-table tr.edited .remarks-col,
+            .has-val, .no-entry, .edited-val,
             .dtr-table tr.weekend td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>

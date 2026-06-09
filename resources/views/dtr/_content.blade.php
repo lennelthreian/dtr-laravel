@@ -73,9 +73,8 @@
                 $hasData = isset($dtrData[$d]) && $dtrData[$d]['has_punch'];
             @endphp
             @php
-                $edited = isset($dtrData[$d]['is_edited']) && $dtrData[$d]['is_edited'];
                 $editedFields = $dtrData[$d]['edited_fields'] ?? [];
-                $rowClass = trim(($isNonWorkingDay && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : '') . ($edited ? 'edited' : ''));
+                $rowClass = trim(($isNonWorkingDay && !$hasData ? 'weekend ' : '') . ($hasData ? 'has-data ' : ''));
             @endphp
             @php
                 $dayWW = $dtrData[$d]['work_week_type'] ?? $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
