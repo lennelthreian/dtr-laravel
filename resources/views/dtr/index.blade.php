@@ -605,6 +605,8 @@
                 reasonInput.placeholder = 'Enter the title of activity';
             } else if (type === 'on_leave') {
                 onLeaveFields.style.display = 'block';
+                reasonLabel.textContent = 'Type of Leave';
+                reasonInput.placeholder = 'Enter leave type';
             } else if (type === 'locator_slip') {
                 locatorSlipFields.style.display = 'block';
                 reasonLabel.textContent = 'Purpose';

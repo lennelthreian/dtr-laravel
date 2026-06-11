@@ -34,7 +34,7 @@ class AdminController extends Controller
 
     public function offices()
     {
-        $offices = Office::with(['sections', 'supervisor', 'seniorManager', 'oic'])->withCount('sections')->orderBy('name')->get();
+        $offices = Office::with(['sections', 'supervisor', 'seniorManager', 'oic', 'seniorManagerOic'])->withCount('sections')->orderBy('name')->get();
         $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
         return view('admin.offices', compact('offices', 'employees'));
     }
@@ -79,10 +79,19 @@ class AdminController extends Controller
         return redirect()->route('admin.offices')->with('success', 'OIC assigned.');
     }
 
+    public function assignSeniorManagerOic(Request $request, Office $office)
+    {
+        $data = $request->validate([
+            'senior_manager_oic_id' => 'nullable|exists:dtr_users,id',
+        ]);
+        $office->update(['senior_manager_oic_id' => $data['senior_manager_oic_id']]);
+        return redirect()->route('admin.offices')->with('success', 'Senior Manager OIC assigned.');
+    }
+
     public function sections()
     {
         $offices = Office::with('sections')->orderBy('name')->get();
-        $sections = Section::with(['office', 'supervisor'])->orderBy('name')->get();
+        $sections = Section::with(['office', 'supervisor', 'oic'])->orderBy('name')->get();
         $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
         return view('admin.sections', compact('offices', 'sections', 'employees'));
     }
@@ -110,6 +119,15 @@ class AdminController extends Controller
         ]);
         $section->update(['supervisor_id' => $data['supervisor_id']]);
         return redirect()->route('admin.sections')->with('success', 'Section supervisor assigned.');
+    }
+
+    public function assignSectionOic(Request $request, Section $section)
+    {
+        $data = $request->validate([
+            'oic_id' => 'nullable|exists:dtr_users,id',
+        ]);
+        $section->update(['oic_id' => $data['oic_id']]);
+        return redirect()->route('admin.sections')->with('success', 'Section OIC assigned.');
     }
 
     public function employees()

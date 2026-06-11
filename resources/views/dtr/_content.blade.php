@@ -190,6 +190,8 @@
                     @endif
                     <td class="hours-col">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
+                @elseif (in_array($dayOfWeek, ['Saturday', 'Sunday']))
+                    <td class="time-col weekend" colspan="6" style="text-align:center;">{{ $dayOfWeek }}</td>
                 @else
                     <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>
                     <td class="time-col{{ !$isNonWorkingDay ? ' no-entry' : '' }}"></td>

@@ -54,19 +54,27 @@ class DtrController extends Controller
 
                 if ($dtrUser) {
                     $sectionSupervisorIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
+                    $sectionOicIds = Section::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
                     $officeSupervisorIds = \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
+                    $seniorManagerOicOfficeIds = \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id')->toArray();
                     $oicOfficeIds = \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
                 }
 
                 $employeeQuery = DtrUser::where('is_active', true);
 
-                if (!empty($sectionSupervisorIds) || !empty($officeSupervisorIds) || !empty($oicOfficeIds)) {
-                    $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $officeSupervisorIds, $oicOfficeIds) {
+                if (!empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds)) {
+                    $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $sectionOicIds, $officeSupervisorIds, $seniorManagerOicOfficeIds, $oicOfficeIds) {
                         if (!empty($sectionSupervisorIds)) {
                             $q->whereIn('section_id', $sectionSupervisorIds);
                         }
+                        if (!empty($sectionOicIds)) {
+                            $q->orWhereIn('section_id', $sectionOicIds);
+                        }
                         if (!empty($officeSupervisorIds)) {
                             $q->orWhereIn('office_id', $officeSupervisorIds);
+                        }
+                        if (!empty($seniorManagerOicOfficeIds)) {
+                            $q->orWhereIn('office_id', $seniorManagerOicOfficeIds);
                         }
                         if (!empty($oicOfficeIds)) {
                             $q->orWhereIn('office_id', $oicOfficeIds);
@@ -129,6 +137,7 @@ class DtrController extends Controller
                             $dtrData[$dayNum] = [
                                 'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
                                 'total_hours' => '', 'remarks' => '', 'has_punch' => false,
+                                'edited_fields' => [],
                             ];
                         }
                         $dtrData[$dayNum]['is_edited'] = true;
@@ -137,7 +146,7 @@ class DtrController extends Controller
                             case 'time_correction':
                                 $dtrData[$dayNum][$edit->field] = $edit->new_value;
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = [$edit->field];
+                                $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], [$edit->field]);
                                 break;
                             case 'absent':
                                 $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -147,7 +156,7 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['total_hours'] = '';
                                 $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Absent' : 'Absent';
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                                $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                                 break;
                             case 'halfday_am':
                                 $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -157,7 +166,7 @@ class DtrController extends Controller
                                 }
                                 $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Halfday (AM)' : 'Halfday (AM)';
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 break;
                             case 'halfday_pm':
                                 $dtrData[$dayNum]['pm_in'] = 'ABSENT';
@@ -167,30 +176,31 @@ class DtrController extends Controller
                                 }
                                 $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Halfday (PM)' : 'Halfday (PM)';
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 break;
                             case 'on_leave':
                                 $leaveField = $edit->field ?: 'whole_day';
+                                $leaveTypeLabel = $edit->reason ? ' (' . $edit->reason . ')' : '';
                                 if ($leaveField === 'am') {
                                     $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' . $leaveTypeLabel : 'On Leave (AM)' . $leaveTypeLabel);
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($leaveField === 'pm') {
                                     $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' : 'On Leave (PM)');
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' . $leaveTypeLabel : 'On Leave (PM)' . $leaveTypeLabel);
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                                     $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
-                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' : 'On Leave');
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' . $leaveTypeLabel : 'On Leave' . $leaveTypeLabel);
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                                 }
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
@@ -198,7 +208,6 @@ class DtrController extends Controller
                                 $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Holiday' : 'Holiday';
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 $dtrData[$dayNum]['is_holiday'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = [];
                                 break;
                             case 'wfh':
                                 $dtrData[$dayNum]['has_punch'] = true;
@@ -208,13 +217,13 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['am_out'] = 'WFH';
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH (AM)' : 'WFH (AM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($wfhType === 'pm') {
                                     $dtrData[$dayNum]['pm_in'] = 'WFH';
                                     $dtrData[$dayNum]['pm_out'] = 'WFH';
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH (PM)' : 'WFH (PM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['am_in'] = 'WFH';
                                     $dtrData[$dayNum]['am_out'] = 'WFH';
@@ -223,7 +232,7 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['is_wfh'] = true;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH' : 'WFH';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                                 }
                                 break;
                             case 'special_order':
@@ -236,19 +245,18 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['so_number'] = $soNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)' : 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($soType === 'pm') {
                                     $dtrData[$dayNum]['pm_in'] = 'SO: ' . $soNum;
                                     $dtrData[$dayNum]['pm_out'] = 'SO: ' . $soNum;
                                     $dtrData[$dayNum]['so_number'] = $soNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)' : 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') : 'Special Order' . ($soNum ? ': ' . $soNum : '');
                                     $dtrData[$dayNum]['so_number'] = $soNum;
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                                    $dtrData[$dayNum]['edited_fields'] = [];
                                 }
                                 break;
                             case 'travel_order':
@@ -261,19 +269,18 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['to_number'] = $toNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)' : 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($toType === 'pm') {
                                     $dtrData[$dayNum]['pm_in'] = 'TO: ' . $toNum;
                                     $dtrData[$dayNum]['pm_out'] = 'TO: ' . $toNum;
                                     $dtrData[$dayNum]['to_number'] = $toNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)' : 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') : 'Travel Order' . ($toNum ? ': ' . $toNum : '');
                                     $dtrData[$dayNum]['to_number'] = $toNum;
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                                    $dtrData[$dayNum]['edited_fields'] = [];
                                 }
                                 break;
                             case 'official_business':
@@ -286,19 +293,18 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['am_out'] = 'OB: ' . $obNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)' : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($obType === 'pm') {
                                     $dtrData[$dayNum]['ob_number'] = $obNum;
                                     $dtrData[$dayNum]['pm_in'] = 'OB: ' . $obNum;
                                     $dtrData[$dayNum]['pm_out'] = 'OB: ' . $obNum;
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)' : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)';
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '');
                                     $dtrData[$dayNum]['ob_number'] = $obNum;
                                     $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                                    $dtrData[$dayNum]['edited_fields'] = [];
                                 }
                                 break;
                             case 'work_suspension':
@@ -307,12 +313,12 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['am_in'] = 'ABSENT';
                                     $dtrData[$dayNum]['am_out'] = 'ABSENT';
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension (AM)' : 'Work Suspension (AM)';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                                 } elseif ($wsType === 'pm') {
                                     $dtrData[$dayNum]['pm_in'] = 'ABSENT';
                                     $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension (PM)' : 'Work Suspension (PM)';
-                                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                                 } else {
                                     $dtrData[$dayNum]['am_in'] = 'ABSENT';
                                     $dtrData[$dayNum]['am_out'] = 'ABSENT';
@@ -320,7 +326,7 @@ class DtrController extends Controller
                                     $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                                     $dtrData[$dayNum]['total_hours'] = '';
                                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension' : 'Work Suspension';
-                                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                                 }
                                 $dtrData[$dayNum]['has_punch'] = true;
                                 break;
@@ -331,7 +337,6 @@ class DtrController extends Controller
                                 $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
                                 $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
                                 $dtrData[$dayNum]['has_punch'] = true;
-                                $dtrData[$dayNum]['edited_fields'] = [];
                                 $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
                                 if ($lsType === 'personal') {
                                     $lsDuration = 0;
@@ -350,13 +355,14 @@ class DtrController extends Controller
                                     $hours = floor($remainingMins / 60);
                                     $mins = round($remainingMins % 60);
                                     $dtrData[$dayNum]['total_hours'] = sprintf('%02d:%02d', $hours, $mins);
-                                    $remarks = 'LS: ' . implode(' | ', $details) . ' (Personal)';
+                                    $lsRemark = 'LS: ' . implode(' | ', $details) . ' (Personal)';
                                     if ($lsDuration > 0) {
-                                        $remarks .= ' | LS Deduction: ' . gmdate('H:i', $lsDuration * 60);
+                                        $lsRemark .= ' | LS Deduction: ' . gmdate('H:i', $lsDuration * 60);
                                     }
-                                    $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . $remarks : $remarks;
+                                    $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . $lsRemark : $lsRemark;
                                 } else {
-                                    $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'LS: ' . implode(' | ', $details) . ' (Official)' : 'LS: ' . implode(' | ', $details) . ' (Official)';
+                                    $lsRemark = 'LS: ' . implode(' | ', $details) . ' (Official)';
+                                    $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . $lsRemark : $lsRemark;
                                     if ($edit->ls_no_return && $edit->ls_time_left) {
                                         $pmEnd = $settings['pm_end'] ?? '17:00';
                                         $timeLeftTs = strtotime($edit->ls_time_left);
@@ -379,10 +385,11 @@ class DtrController extends Controller
                             $hasSo = !empty($day['so_number']);
                             $hasTo = !empty($day['to_number']);
                             $hasOb = !empty($day['ob_number']);
+                            $hasLs = strpos($day['remarks'] ?? '', 'LS:') !== false;
                             $isOnLeave = ($day['am_in'] ?? '') === 'ON LEAVE' || ($day['pm_in'] ?? '') === 'ON LEAVE';
                             if ($edit->type === 'time_correction') {
                                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
-                                if (!$hasSo && !$hasTo && !$hasOb && !$isOnLeave) {
+                                if (!$hasSo && !$hasTo && !$hasOb && !$hasLs && !$isOnLeave) {
                                     $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
                                 }
                             } else {
@@ -455,14 +462,14 @@ class DtrController extends Controller
                         if (!isset($day['work_week_type'])) continue;
                         $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                        $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
+                        $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') !== false || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                         if (!$isSpecial) {
                             $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
                         }
 
                         if ($isSpecial) {
-                            if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
+                            if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') !== false) {
                                 // LS total_hours already set by LS case block
                             } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                                 // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
@@ -563,13 +570,19 @@ class DtrController extends Controller
         $sectionSupervisorIds = $dtrUser
             ? Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
+        $sectionOicIds = $dtrUser
+            ? Section::where('oic_id', $dtrUser->id)->pluck('id')->toArray()
+            : [];
         $officeSupervisorIds = $dtrUser
             ? \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray()
+            : [];
+        $seniorManagerOicOfficeIds = $dtrUser
+            ? \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
         $oicOfficeIds = $dtrUser
             ? \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
-        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($officeSupervisorIds) || !empty($oicOfficeIds);
+        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds);
 
         $ahUserId = $settings['agency_head_user_id'] ?? null;
         if (!$canViewAll && $ahUserId && (int) $ahUserId === $user->id) {
@@ -625,20 +638,20 @@ class DtrController extends Controller
             $dayNum = (int) $edit->target_date->format('j');
             $r = $dtrData[$dayNum]['remarks'] ?? '';
             if (!isset($dtrData[$dayNum])) {
-                $dtrData[$dayNum] = [
-                    'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
-                    'total_hours' => '', 'remarks' => '', 'has_punch' => false,
-                ];
-            }
-            $dtrData[$dayNum]['is_edited'] = true;
+                    $dtrData[$dayNum] = [
+                        'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
+                        'total_hours' => '', 'remarks' => '', 'has_punch' => false, 'edited_fields' => [],
+                    ];
+                }
+                $dtrData[$dayNum]['is_edited'] = true;
 
-            switch ($edit->type) {
-                case 'time_correction':
-                    $dtrData[$dayNum][$edit->field] = $edit->new_value;
-                    $dtrData[$dayNum]['has_punch'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = [$edit->field];
-                    break;
-                case 'absent':
+                switch ($edit->type) {
+                    case 'time_correction':
+                        $dtrData[$dayNum][$edit->field] = $edit->new_value;
+                        $dtrData[$dayNum]['has_punch'] = true;
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], [$edit->field]);
+                        break;
+                    case 'absent':
                     $dtrData[$dayNum]['am_in'] = 'ABSENT';
                     $dtrData[$dayNum]['am_out'] = 'ABSENT';
                     $dtrData[$dayNum]['pm_in'] = 'ABSENT';
@@ -646,7 +659,7 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['total_hours'] = '';
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Absent' : 'Absent';
                     $dtrData[$dayNum]['has_punch'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                     break;
                 case 'halfday_am':
                     $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -656,7 +669,7 @@ class DtrController extends Controller
                     }
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Halfday (AM)' : 'Halfday (AM)';
                     $dtrData[$dayNum]['has_punch'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     break;
                 case 'halfday_pm':
                     $dtrData[$dayNum]['pm_in'] = 'ABSENT';
@@ -666,30 +679,31 @@ class DtrController extends Controller
                     }
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Halfday (PM)' : 'Halfday (PM)';
                     $dtrData[$dayNum]['has_punch'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     break;
                 case 'on_leave':
                     $leaveField = $edit->field ?: 'whole_day';
+                    $leaveTypeLabel = $edit->reason ? ' (' . $edit->reason . ')' : '';
                     if ($leaveField === 'am') {
                         $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                         $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                         $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' . $leaveTypeLabel : 'On Leave (AM)' . $leaveTypeLabel);
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($leaveField === 'pm') {
                         $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                         $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                         $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' : 'On Leave (PM)');
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (PM)' . $leaveTypeLabel : 'On Leave (PM)' . $leaveTypeLabel);
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                         $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                         $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                         $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                         $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
-                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' : 'On Leave');
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave' . $leaveTypeLabel : 'On Leave' . $leaveTypeLabel);
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                     }
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
@@ -697,7 +711,7 @@ class DtrController extends Controller
                     $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Holiday' : 'Holiday';
                     $dtrData[$dayNum]['has_punch'] = true;
                     $dtrData[$dayNum]['is_holiday'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = [];
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                     break;
                 case 'wfh':
                     $dtrData[$dayNum]['has_punch'] = true;
@@ -707,13 +721,13 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['am_out'] = 'WFH';
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH (AM)' : 'WFH (AM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($wfhType === 'pm') {
                         $dtrData[$dayNum]['pm_in'] = 'WFH';
                         $dtrData[$dayNum]['pm_out'] = 'WFH';
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH (PM)' : 'WFH (PM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['am_in'] = 'WFH';
                         $dtrData[$dayNum]['am_out'] = 'WFH';
@@ -722,7 +736,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['is_wfh'] = true;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | WFH' : 'WFH';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                     }
                     break;
                 case 'special_order':
@@ -735,19 +749,19 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['so_number'] = $soNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)' : 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($soType === 'pm') {
                         $dtrData[$dayNum]['pm_in'] = 'SO: ' . $soNum;
                         $dtrData[$dayNum]['pm_out'] = 'SO: ' . $soNum;
                         $dtrData[$dayNum]['so_number'] = $soNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)' : 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Special Order' . ($soNum ? ': ' . $soNum : '') : 'Special Order' . ($soNum ? ': ' . $soNum : '');
                         $dtrData[$dayNum]['so_number'] = $soNum;
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                        $dtrData[$dayNum]['edited_fields'] = [];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                     }
                     break;
                 case 'travel_order':
@@ -760,19 +774,19 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['to_number'] = $toNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)' : 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($toType === 'pm') {
                         $dtrData[$dayNum]['pm_in'] = 'TO: ' . $toNum;
                         $dtrData[$dayNum]['pm_out'] = 'TO: ' . $toNum;
                         $dtrData[$dayNum]['to_number'] = $toNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)' : 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Travel Order' . ($toNum ? ': ' . $toNum : '') : 'Travel Order' . ($toNum ? ': ' . $toNum : '');
                         $dtrData[$dayNum]['to_number'] = $toNum;
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                        $dtrData[$dayNum]['edited_fields'] = [];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                     }
                     break;
                 case 'official_business':
@@ -785,19 +799,19 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['am_out'] = 'OB: ' . $obNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)' : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($obType === 'pm') {
                         $dtrData[$dayNum]['ob_number'] = $obNum;
                         $dtrData[$dayNum]['pm_in'] = 'OB: ' . $obNum;
                         $dtrData[$dayNum]['pm_out'] = 'OB: ' . $obNum;
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)' : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)';
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | ' . 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') : 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '');
                         $dtrData[$dayNum]['ob_number'] = $obNum;
                         $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                        $dtrData[$dayNum]['edited_fields'] = [];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                     }
                     break;
                 case 'work_suspension':
@@ -806,12 +820,12 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
                         $dtrData[$dayNum]['am_out'] = 'ABSENT';
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension (AM)' : 'Work Suspension (AM)';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                     } elseif ($wsType === 'pm') {
                         $dtrData[$dayNum]['pm_in'] = 'ABSENT';
                         $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension (PM)' : 'Work Suspension (PM)';
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                     } else {
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
                         $dtrData[$dayNum]['am_out'] = 'ABSENT';
@@ -819,7 +833,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['pm_out'] = 'ABSENT';
                         $dtrData[$dayNum]['total_hours'] = '';
                         $dtrData[$dayNum]['remarks'] = ($r ?? '') ? $r . ' | Work Suspension' : 'Work Suspension';
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                     }
                     $dtrData[$dayNum]['has_punch'] = true;
                     break;
@@ -830,7 +844,7 @@ class DtrController extends Controller
                     $timeLeft = $edit->ls_time_left ? date('h:i A', strtotime($edit->ls_time_left)) : '';
                     $timeReturned = $edit->ls_no_return ? 'No Return' : ($edit->ls_time_returned ? date('h:i A', strtotime($edit->ls_time_returned)) : '');
                     $dtrData[$dayNum]['has_punch'] = true;
-                    $dtrData[$dayNum]['edited_fields'] = [];
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                     $details = array_filter([$whereabouts, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
                     if ($lsType === 'personal') {
                         $lsDuration = 0;
@@ -923,10 +937,11 @@ class DtrController extends Controller
             $hasSo = !empty($day['so_number']);
             $hasTo = !empty($day['to_number']);
             $hasOb = !empty($day['ob_number']);
+            $hasLs = strpos($day['remarks'] ?? '', 'LS:') !== false;
             $isOnLeave = ($day['am_in'] ?? '') === 'ON LEAVE' || ($day['pm_in'] ?? '') === 'ON LEAVE';
             if ($edit->type === 'time_correction') {
                 $dtrData[$dayNum]['total_hours'] = $this->recalcHours($day, $settings);
-                if (!$hasSo && !$hasTo && !$hasOb && !$isOnLeave) {
+                if (!$hasSo && !$hasTo && !$hasOb && !$hasLs && !$isOnLeave) {
                     $dtrData[$dayNum]['remarks'] = $this->recalcRemarks($day, $settings);
                 }
             } else {
@@ -958,14 +973,14 @@ class DtrController extends Controller
             if (!isset($day['work_week_type'])) continue;
             $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-            $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
+            $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') !== false || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
             if (!$isSpecial) {
                 $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
             }
 
             if ($isSpecial) {
-                if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
+                if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') !== false) {
                     // LS total_hours already set by LS case block
                 } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                     // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
@@ -1047,7 +1062,15 @@ class DtrController extends Controller
                 ->whereHas('dtrUsers', function ($q) use ($employee) {
                     $q->where('id', $employee->id);
                 })->exists()
+                || Section::where('oic_id', $dtrUser->id)
+                    ->whereHas('dtrUsers', function ($q) use ($employee) {
+                        $q->where('id', $employee->id);
+                    })->exists()
                 || \App\Models\Office::where('supervisor_id', $dtrUser->id)
+                    ->whereHas('dtrUsers', function ($q) use ($employee) {
+                        $q->where('id', $employee->id);
+                    })->exists()
+                || \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)
                     ->whereHas('dtrUsers', function ($q) use ($employee) {
                         $q->where('id', $employee->id);
                     })->exists()
@@ -1110,7 +1133,7 @@ class DtrController extends Controller
                 if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
-                        'total_hours' => '', 'remarks' => '', 'has_punch' => false,
+                        'total_hours' => '', 'remarks' => '', 'has_punch' => false, 'edited_fields' => [],
                     ];
                 }
                 $dtrData[$dayNum]['is_edited'] = true;
@@ -1119,7 +1142,7 @@ class DtrController extends Controller
                     case 'time_correction':
                         $dtrData[$dayNum][$edit->field] = $edit->new_value;
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = [$edit->field];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], [$edit->field]);
                         break;
                     case 'absent':
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -1129,7 +1152,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['total_hours'] = '';
                         $dtrData[$dayNum]['remarks'] = 'Absent';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         break;
                     case 'halfday_am':
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -1139,7 +1162,7 @@ class DtrController extends Controller
                         }
                         $dtrData[$dayNum]['remarks'] = 'Halfday (AM)';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         break;
                     case 'halfday_pm':
                         $dtrData[$dayNum]['pm_in'] = 'ABSENT';
@@ -1149,30 +1172,31 @@ class DtrController extends Controller
                         }
                         $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         break;
                     case 'on_leave':
                         $leaveField = $edit->field ?: 'whole_day';
+                        $leaveTypeLabel = $edit->reason ? ' (' . $edit->reason . ')' : '';
                         if ($leaveField === 'am') {
                             $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' . $leaveTypeLabel : 'On Leave (AM)' . $leaveTypeLabel);
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($leaveField === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)' . $leaveTypeLabel;
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
-                            $dtrData[$dayNum]['remarks'] = 'On Leave';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['remarks'] = 'On Leave' . $leaveTypeLabel;
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         }
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
@@ -1180,7 +1204,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['remarks'] = 'Holiday';
                         $dtrData[$dayNum]['has_punch'] = true;
                         $dtrData[$dayNum]['is_holiday'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = [];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         break;
                     case 'wfh':
                         $dtrData[$dayNum]['has_punch'] = true;
@@ -1190,13 +1214,13 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['am_out'] = 'WFH';
                             $dtrData[$dayNum]['remarks'] = 'WFH (AM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($wfhType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'WFH';
                             $dtrData[$dayNum]['pm_out'] = 'WFH';
                             $dtrData[$dayNum]['remarks'] = 'WFH (PM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['am_in'] = 'WFH';
                             $dtrData[$dayNum]['am_out'] = 'WFH';
@@ -1205,7 +1229,7 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['is_wfh'] = true;
                             $dtrData[$dayNum]['remarks'] = 'WFH';
                             $dtrData[$dayNum]['total_hours'] = '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         }
                         break;
                     case 'special_order':
@@ -1218,19 +1242,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($soType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'SO: ' . $soNum;
                             $dtrData[$dayNum]['pm_out'] = 'SO: ' . $soNum;
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '');
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['total_hours'] = '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                     case 'travel_order':
@@ -1243,19 +1267,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($toType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'TO: ' . $toNum;
                             $dtrData[$dayNum]['pm_out'] = 'TO: ' . $toNum;
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '');
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['total_hours'] = '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                     case 'official_business':
@@ -1268,19 +1292,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['am_out'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($obType === 'pm') {
                             $dtrData[$dayNum]['ob_number'] = $obNum;
                             $dtrData[$dayNum]['pm_in'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['pm_out'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '');
                             $dtrData[$dayNum]['ob_number'] = $obNum;
                             $dtrData[$dayNum]['total_hours'] = '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                 }
@@ -1327,18 +1351,20 @@ class DtrController extends Controller
             }
             unset($day);
 
+            $this->recomputeHalfdayHours($dtrData, $employee, $settings);
+
             foreach ($dtrData as $dayNum => &$day) {
                 if (!isset($day['work_week_type'])) continue;
                 $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
+                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') !== false || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                 if (!$isSpecial) {
                     $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
                 }
 
                 if ($isSpecial) {
-                    if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
+                    if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') !== false) {
                         // LS total_hours already set by LS case block
                     } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                         // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
@@ -1434,7 +1460,9 @@ class DtrController extends Controller
         $isSupervisor = $user->is_super;
         if (!$isSupervisor && $dtrUser) {
             $isSupervisor = \App\Models\Section::where('supervisor_id', $dtrUser->id)->exists()
+                || \App\Models\Section::where('oic_id', $dtrUser->id)->exists()
                 || \App\Models\Office::where('supervisor_id', $dtrUser->id)->exists()
+                || \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)->exists()
                 || \App\Models\Office::where('oic_id', $dtrUser->id)->exists();
         }
 
@@ -1502,7 +1530,7 @@ class DtrController extends Controller
                 if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
-                        'total_hours' => '', 'remarks' => '', 'has_punch' => false,
+                        'total_hours' => '', 'remarks' => '', 'has_punch' => false, 'edited_fields' => [],
                     ];
                 }
                 $dtrData[$dayNum]['is_edited'] = true;
@@ -1511,7 +1539,7 @@ class DtrController extends Controller
                     case 'time_correction':
                         $dtrData[$dayNum][$edit->field] = $edit->new_value;
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = [$edit->field];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], [$edit->field]);
                         break;
                     case 'absent':
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -1521,7 +1549,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['total_hours'] = '';
                         $dtrData[$dayNum]['remarks'] = 'Absent';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         break;
                     case 'halfday_am':
                         $dtrData[$dayNum]['am_in'] = 'ABSENT';
@@ -1531,7 +1559,7 @@ class DtrController extends Controller
                         }
                         $dtrData[$dayNum]['remarks'] = 'Halfday (AM)';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         break;
                     case 'halfday_pm':
                         $dtrData[$dayNum]['pm_in'] = 'ABSENT';
@@ -1541,30 +1569,31 @@ class DtrController extends Controller
                         }
                         $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
                         $dtrData[$dayNum]['has_punch'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         break;
                     case 'on_leave':
                         $leaveField = $edit->field ?: 'whole_day';
+                        $leaveTypeLabel = $edit->reason ? ' (' . $edit->reason . ')' : '';
                         if ($leaveField === 'am') {
                             $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' : 'On Leave (AM)');
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['remarks'] = ($r && strpos($r, 'On Leave') !== false) ? $r : (($r ?? '') ? $r . ' | On Leave (AM)' . $leaveTypeLabel : 'On Leave (AM)' . $leaveTypeLabel);
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($leaveField === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['leave_credit_minutes'] = max(1, (int) ($edit->new_value ?: '4')) * 60;
-                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['remarks'] = 'On Leave (PM)' . $leaveTypeLabel;
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
                             $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
                             $dtrData[$dayNum]['total_hours'] = sprintf('%02d:00', max(1, (int) ($edit->new_value ?: '8')));
-                            $dtrData[$dayNum]['remarks'] = 'On Leave';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['remarks'] = 'On Leave' . $leaveTypeLabel;
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         }
                         $dtrData[$dayNum]['has_punch'] = true;
                         break;
@@ -1572,7 +1601,7 @@ class DtrController extends Controller
                         $dtrData[$dayNum]['remarks'] = 'Holiday';
                         $dtrData[$dayNum]['has_punch'] = true;
                         $dtrData[$dayNum]['is_holiday'] = true;
-                        $dtrData[$dayNum]['edited_fields'] = [];
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         break;
                     case 'wfh':
                         $dtrData[$dayNum]['has_punch'] = true;
@@ -1582,13 +1611,13 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['am_out'] = 'WFH';
                             $dtrData[$dayNum]['remarks'] = 'WFH (AM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($wfhType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'WFH';
                             $dtrData[$dayNum]['pm_out'] = 'WFH';
                             $dtrData[$dayNum]['remarks'] = 'WFH (PM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['am_in'] = 'WFH';
                             $dtrData[$dayNum]['am_out'] = 'WFH';
@@ -1597,7 +1626,7 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['is_wfh'] = true;
                             $dtrData[$dayNum]['remarks'] = 'WFH';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out', 'pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
                         }
                         break;
                     case 'special_order':
@@ -1610,19 +1639,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($soType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'SO: ' . $soNum;
                             $dtrData[$dayNum]['pm_out'] = 'SO: ' . $soNum;
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Special Order' . ($soNum ? ': ' . $soNum : '');
                             $dtrData[$dayNum]['so_number'] = $soNum;
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                     case 'travel_order':
@@ -1635,19 +1664,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($toType === 'pm') {
                             $dtrData[$dayNum]['pm_in'] = 'TO: ' . $toNum;
                             $dtrData[$dayNum]['pm_out'] = 'TO: ' . $toNum;
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Travel Order' . ($toNum ? ': ' . $toNum : '');
                             $dtrData[$dayNum]['to_number'] = $toNum;
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                     case 'official_business':
@@ -1660,19 +1689,19 @@ class DtrController extends Controller
                             $dtrData[$dayNum]['am_out'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (AM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['am_in', 'am_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
                         } elseif ($obType === 'pm') {
                             $dtrData[$dayNum]['ob_number'] = $obNum;
                             $dtrData[$dayNum]['pm_in'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['pm_out'] = 'OB: ' . $obNum;
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '') . ' (PM)';
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '05:00' : '04:00';
-                            $dtrData[$dayNum]['edited_fields'] = ['pm_in', 'pm_out'];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
                         } else {
                             $dtrData[$dayNum]['remarks'] = 'Official Business' . ($obNum ? ': ' . $obNum : '') . ($edit->reason ? ' - ' . $edit->reason : '');
                             $dtrData[$dayNum]['ob_number'] = $obNum;
                             $dtrData[$dayNum]['total_hours'] = $empDefaultWW === '4-day' ? '10:00' : '08:00';
-                            $dtrData[$dayNum]['edited_fields'] = [];
+                            $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
                         }
                         break;
                 }
@@ -1758,14 +1787,14 @@ class DtrController extends Controller
                 if (!isset($day['work_week_type'])) continue;
                 $schedule = $this->getScheduleForWorkWeek($day['work_week_type'], $settings);
 
-                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') === 0 || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
+                $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') !== false || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
 
                 if (!$isSpecial) {
                     $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
                 }
 
                 if ($isSpecial) {
-                    if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') === 0) {
+                    if (isset($day['remarks']) && strpos($day['remarks'], 'LS:') !== false) {
                         // LS total_hours already set by LS case block
                     } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                         // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
@@ -2353,3 +2382,6 @@ class DtrController extends Controller
         unset($day);
     }
 }
+
+
+

@@ -8,7 +8,7 @@ use App\Services\LogsUserActivity;
 class Office extends Model
 {
     use LogsUserActivity;
-    protected $fillable = ['name', 'supervisor_id', 'senior_manager_id', 'oic_id'];
+    protected $fillable = ['name', 'supervisor_id', 'senior_manager_id', 'oic_id', 'senior_manager_oic_id'];
 
     public function sections()
     {
@@ -33,5 +33,10 @@ class Office extends Model
     public function oic()
     {
         return $this->belongsTo(DtrUser::class, 'oic_id');
+    }
+
+    public function seniorManagerOic()
+    {
+        return $this->belongsTo(DtrUser::class, 'senior_manager_oic_id');
     }
 }

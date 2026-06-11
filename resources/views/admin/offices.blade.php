@@ -70,7 +70,8 @@
                                 <th class="text-center">Sections</th>
                                 <th>Supervisor</th>
                                 <th>Senior Manager</th>
-                                <th>OIC</th>
+                                <th>OIC (Supervisor)</th>
+                                <th>OIC (Senior Manager)</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -100,10 +101,18 @@
                                             <span class="text-muted">&mdash;</span>
                                         @endif
                                     </td>
+                                    <td>
+                                        @if ($office->seniorManagerOic)
+                                            {{ $office->seniorManagerOic->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
                                     <td class="text-center nowrap">
                                         <button class="btn btn-outline btn-xs" onclick="showAssign({{ $office->id }}, '{{ $office->name }}', {{ $office->supervisor_id ?? 'null' }})">Set Supervisor</button>
                                         <button class="btn btn-outline btn-xs" onclick="showAssignSM({{ $office->id }}, '{{ $office->name }}', {{ $office->senior_manager_id ?? 'null' }})">Set Senior Manager</button>
-                                        <button class="btn btn-outline btn-xs" onclick="showAssignOIC({{ $office->id }}, '{{ $office->name }}', {{ $office->oic_id ?? 'null' }})">Set OIC</button>
+                                        <button class="btn btn-outline btn-xs" onclick="showAssignOIC({{ $office->id }}, '{{ $office->name }}', {{ $office->oic_id ?? 'null' }})">Set OIC (Sup)</button>
+                                        <button class="btn btn-outline btn-xs" onclick="showAssignSMOIC({{ $office->id }}, '{{ $office->name }}', {{ $office->senior_manager_oic_id ?? 'null' }})">Set OIC (SM)</button>
                                         <form method="POST" action="{{ route('admin.offices.delete', $office) }}"
                                               onsubmit="return confirm('Delete this office and all its sections?')" style="display:inline">
                                             @csrf @method('DELETE')
@@ -112,7 +121,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No offices yet.</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted" style="padding:24px;">No offices yet.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -169,7 +178,7 @@
 
     <div id="assignOIC" class="modal-overlay">
         <div class="modal-box">
-            <h2>Set OIC</h2>
+            <h2>Set OIC (Supervisor)</h2>
             <p class="modal-sub" id="modalOICOfficeName"></p>
             <form method="POST" id="assignOICForm">
                 @csrf
@@ -184,6 +193,29 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-outline" onclick="closeAssignOIC()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="assignSMOIC" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Set OIC (Senior Manager)</h2>
+            <p class="modal-sub" id="modalSMOICOfficeName"></p>
+            <form method="POST" id="assignSMOICForm">
+                @csrf
+                <div class="form-group">
+                    <label for="modal_senior_manager_oic_id">OIC</label>
+                    <select name="senior_manager_oic_id" id="modal_senior_manager_oic_id" class="form-control">
+                        <option value="">&mdash; None &mdash;</option>
+                        @foreach ($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->emp_code }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeAssignSMOIC()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -243,6 +275,18 @@
         }
         document.getElementById('assignOIC').addEventListener('click', function(e) {
             if (e.target === this) closeAssignOIC();
+        });
+        function showAssignSMOIC(id, name, smOicId) {
+            document.getElementById('modalSMOICOfficeName').textContent = name;
+            document.getElementById('assignSMOICForm').action = '{{ url('/admin/offices') }}/' + id + '/assign-senior-manager-oic';
+            document.getElementById('modal_senior_manager_oic_id').value = smOicId || '';
+            document.getElementById('assignSMOIC').classList.add('active');
+        }
+        function closeAssignSMOIC() {
+            document.getElementById('assignSMOIC').classList.remove('active');
+        }
+        document.getElementById('assignSMOIC').addEventListener('click', function(e) {
+            if (e.target === this) closeAssignSMOIC();
         });
     </script>
 </body>

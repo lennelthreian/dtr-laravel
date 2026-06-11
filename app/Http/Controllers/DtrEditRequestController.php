@@ -250,45 +250,65 @@ class DtrEditRequestController extends Controller
     private function notifySupervisors(DtrEditRequest $editRequest, DtrUser $employee)
     {
         $section = Section::find($employee->section_id);
-        if ($section && $section->supervisor_id && $section->supervisor_id != $employee->id) {
-            $supervisorDtr = DtrUser::find($section->supervisor_id);
-            if ($supervisorDtr) {
-                $supervisorUser = User::where('emp_code', $supervisorDtr->emp_code)->first();
-                if ($supervisorUser) {
-                    $supervisorUser->notify(new EditRequestSubmitted($editRequest));
+        if ($section) {
+            if ($section->oic_id && $section->oic_id != $employee->id) {
+                $oicDtr = DtrUser::find($section->oic_id);
+                if ($oicDtr) {
+                    $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
+                    if ($oicUser) {
+                        $oicUser->notify(new EditRequestSubmitted($editRequest));
+                    }
+                }
+            } elseif ($section->supervisor_id && $section->supervisor_id != $employee->id) {
+                $supervisorDtr = DtrUser::find($section->supervisor_id);
+                if ($supervisorDtr) {
+                    $supervisorUser = User::where('emp_code', $supervisorDtr->emp_code)->first();
+                    if ($supervisorUser) {
+                        $supervisorUser->notify(new EditRequestSubmitted($editRequest));
+                    }
                 }
             }
         }
 
         $office = Office::find($employee->office_id);
-        if ($office && $office->supervisor_id && $office->supervisor_id != $employee->id) {
-            $officeSupervisorDtr = DtrUser::find($office->supervisor_id);
-            if ($officeSupervisorDtr) {
-                $officeSupervisorUser = User::where('emp_code', $officeSupervisorDtr->emp_code)->first();
-                if ($officeSupervisorUser) {
-                    $officeSupervisorUser->notify(new EditRequestSubmitted($editRequest));
+        if ($office) {
+            if ($office->oic_id && $office->oic_id != $employee->id) {
+                $oicDtr = DtrUser::find($office->oic_id);
+                if ($oicDtr) {
+                    $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
+                    if ($oicUser) {
+                        $oicUser->notify(new EditRequestSubmitted($editRequest));
+                    }
+                }
+            } elseif ($office->supervisor_id && $office->supervisor_id != $employee->id) {
+                $officeSupervisorDtr = DtrUser::find($office->supervisor_id);
+                if ($officeSupervisorDtr) {
+                    $officeSupervisorUser = User::where('emp_code', $officeSupervisorDtr->emp_code)->first();
+                    if ($officeSupervisorUser) {
+                        $officeSupervisorUser->notify(new EditRequestSubmitted($editRequest));
+                    }
                 }
             }
         }
 
-        $isOfficeSupervisor = Office::where('supervisor_id', $employee->id)->exists();
+        $isOfficeSupervisor = $office && Office::where('supervisor_id', $employee->id)->exists();
 
-        if ($isOfficeSupervisor && $office && $office->senior_manager_id && $office->senior_manager_id != $employee->id) {
-            $seniorManagerDtr = DtrUser::find($office->senior_manager_id);
-            if ($seniorManagerDtr) {
-                $seniorManagerUser = User::where('emp_code', $seniorManagerDtr->emp_code)->first();
-                if ($seniorManagerUser) {
-                    $seniorManagerUser->notify(new EditRequestSubmitted($editRequest));
+        if ($isOfficeSupervisor && $office) {
+            if ($office->senior_manager_oic_id && $office->senior_manager_oic_id != $employee->id) {
+                $smOicDtr = DtrUser::find($office->senior_manager_oic_id);
+                if ($smOicDtr) {
+                    $smOicUser = User::where('emp_code', $smOicDtr->emp_code)->first();
+                    if ($smOicUser) {
+                        $smOicUser->notify(new EditRequestSubmitted($editRequest));
+                    }
                 }
-            }
-        }
-
-        if ($office && $office->oic_id && $office->oic_id != $employee->id) {
-            $oicDtr = DtrUser::find($office->oic_id);
-            if ($oicDtr) {
-                $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
-                if ($oicUser) {
-                    $oicUser->notify(new EditRequestSubmitted($editRequest));
+            } elseif ($office->senior_manager_id && $office->senior_manager_id != $employee->id) {
+                $seniorManagerDtr = DtrUser::find($office->senior_manager_id);
+                if ($seniorManagerDtr) {
+                    $seniorManagerUser = User::where('emp_code', $seniorManagerDtr->emp_code)->first();
+                    if ($seniorManagerUser) {
+                        $seniorManagerUser->notify(new EditRequestSubmitted($editRequest));
+                    }
                 }
             }
         }
@@ -328,24 +348,41 @@ class DtrEditRequestController extends Controller
 
         $employee = $editRequest->employee;
 
-        $sectionIds = Section::where('supervisor_id', $supervisorId)->pluck('id');
-        if (in_array($employee->section_id, $sectionIds->toArray())) {
-            return;
+        $section = Section::find($employee->section_id);
+
+        if ($section) {
+            if ($section->oic_id) {
+                if ($section->oic_id == $supervisorId) {
+                    return;
+                }
+            } elseif ($section->supervisor_id == $supervisorId) {
+                return;
+            }
         }
 
-        $officeIds = Office::where('supervisor_id', $supervisorId)->pluck('id');
-        if (in_array($employee->office_id, $officeIds->toArray())) {
-            return;
-        }
+        $office = Office::find($employee->office_id);
 
-        $seniorManagerOfficeIds = Office::where('senior_manager_id', $supervisorId)->pluck('id');
-        if (in_array($employee->office_id, $seniorManagerOfficeIds->toArray())) {
-            return;
-        }
+        if ($office) {
+            if ($office->oic_id) {
+                if ($office->oic_id == $supervisorId) {
+                    return;
+                }
+            } elseif ($office->supervisor_id == $supervisorId) {
+                return;
+            }
 
-        $oicOfficeIds = Office::where('oic_id', $supervisorId)->pluck('id');
-        if (in_array($employee->office_id, $oicOfficeIds->toArray())) {
-            return;
+            $isOfficeSupervisor = $office->supervisor_id == $employee->id;
+            $isSectionSupervisor = $section && $section->supervisor_id == $employee->id;
+
+            if ($isOfficeSupervisor || $isSectionSupervisor) {
+                if ($office->senior_manager_oic_id) {
+                    if ($office->senior_manager_oic_id == $supervisorId) {
+                        return;
+                    }
+                } elseif ($office->senior_manager_id == $supervisorId) {
+                    return;
+                }
+            }
         }
 
         abort(403, 'You are not the supervisor of this employee.');

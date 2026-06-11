@@ -75,7 +75,7 @@
                                 <th>Name</th>
                                 <th>Office</th>
                                 <th>Supervisor</th>
-                                <th class="text-center">Supervisor ID</th>
+                                <th>OIC</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -91,9 +91,16 @@
                                             <span class="text-muted">&mdash;</span>
                                         @endif
                                     </td>
-                                    <td class="text-center">{{ $section->supervisor_id ?? '&mdash;' }}</td>
+                                    <td>
+                                        @if ($section->oic)
+                                            {{ $section->oic->full_name }}
+                                        @else
+                                            <span class="text-muted">&mdash;</span>
+                                        @endif
+                                    </td>
                                     <td class="text-center nowrap">
                                         <button class="btn btn-outline btn-xs" onclick="showAssign({{ $section->id }}, '{{ $section->name }}', {{ $section->supervisor_id ?? 'null' }})">Set Supervisor</button>
+                                        <button class="btn btn-outline btn-xs" onclick="showAssignOIC({{ $section->id }}, '{{ $section->name }}', {{ $section->oic_id ?? 'null' }})">Set OIC</button>
                                         <form method="POST" action="{{ route('admin.sections.delete', $section) }}"
                                               onsubmit="return confirm('Delete this section?')" style="display:inline">
                                             @csrf @method('DELETE')
@@ -103,6 +110,8 @@
                                 </tr>
                             @empty
                                 <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No sections yet.</td></tr>
+
+
                             @endforelse
                         </tbody>
                     </table>
@@ -128,6 +137,29 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-outline" onclick="closeAssign()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="assignOICModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Set Section OIC</h2>
+            <p class="modal-sub" id="modalOICSectionName"></p>
+            <form method="POST" id="assignOICForm">
+                @csrf
+                <div class="form-group">
+                    <label for="modal_oic_id">OIC</label>
+                    <select name="oic_id" id="modal_oic_id" class="form-control">
+                        <option value="">&mdash; None &mdash;</option>
+                        @foreach ($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->emp_code }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeAssignOIC()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -163,6 +195,18 @@
         }
         document.getElementById('assignModal').addEventListener('click', function(e) {
             if (e.target === this) closeAssign();
+        });
+        function showAssignOIC(id, name, oicId) {
+            document.getElementById('modalOICSectionName').textContent = name;
+            document.getElementById('assignOICForm').action = '{{ url('/admin/sections') }}/' + id + '/assign-oic';
+            document.getElementById('modal_oic_id').value = oicId || '';
+            document.getElementById('assignOICModal').classList.add('active');
+        }
+        function closeAssignOIC() {
+            document.getElementById('assignOICModal').classList.remove('active');
+        }
+        document.getElementById('assignOICModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAssignOIC();
         });
     </script>
 </body>

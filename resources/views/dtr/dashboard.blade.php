@@ -103,7 +103,7 @@
                             <div class="notif-header">Notifications</div>
                             @forelse ($unread as $notif)
                                 @if ($notif->data['type'] === 'edit_request_submitted')
-                                    <a href="{{ route('supervisor.pending') }}" class="notif-item">
+                                    <a href="{{ route('supervisor.pending') }}" class="notif-item" data-notif-id="{{ $notif->id }}">
                                 @else
                                     @php
                                         $d = $notif->data['target_date'] ?? null;
@@ -111,7 +111,7 @@
                                         $y = $d ? date('Y', strtotime($d)) : date('Y');
                                         $ec = $notif->data['emp_code'] ?? '';
                                     @endphp
-                                    <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item">
+                                    <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item" data-notif-id="{{ $notif->id }}">
                                 @endif
                                     <strong>{{ $notif->data['message'] }}</strong>
                                     <div class="notif-time">{{ $notif->created_at->diffForHumans() }}</div>
@@ -201,7 +201,7 @@
                                         elseif ($isWs) { $typeClass = 'slot-suspension'; $typeLabel = 'Suspension'; }
                                         elseif (strpos($remarks, 'WFH') !== false) { $typeClass = 'slot-wfh'; $typeLabel = 'WFH'; }
                                         elseif (strpos($remarks, 'Absent') !== false) { $typeClass = 'slot-absent'; $typeLabel = 'Absent'; }
-                                        elseif ($isWholeDayLeave) { $typeClass = 'slot-leave'; $typeLabel = 'On Leave'; }
+                                        elseif ($isWholeDayLeave) { $typeClass = 'slot-leave'; $typeLabel = $remarks ?: 'On Leave'; }
                                         elseif (strpos($remarks, 'Halfday') !== false) { $typeClass = 'slot-hd'; $typeLabel = $remarks; }
                                         elseif (strpos($remarks, 'LS:') !== false) { $typeClass = 'slot-ls'; $typeLabel = 'LS'; }
                                         elseif (!empty($d['so_number'])) { $typeClass = 'slot-so'; $typeLabel = 'SO'; }

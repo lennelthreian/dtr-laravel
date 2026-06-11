@@ -34,15 +34,22 @@ class SupervisorController extends Controller
             }
 
             $sectionIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id');
+            $sectionOicIds = Section::where('oic_id', $dtrUser->id)->pluck('id');
             $officeIds = Office::where('supervisor_id', $dtrUser->id)->pluck('id');
             $seniorManagerOfficeIds = Office::where('senior_manager_id', $dtrUser->id)->pluck('id');
+            $seniorManagerOicOfficeIds = Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id');
             $oicOfficeIds = Office::where('oic_id', $dtrUser->id)->pluck('id');
 
             $requests = DtrEditRequest::with('employee')
-                ->where(function ($q) use ($sectionIds, $officeIds, $seniorManagerOfficeIds, $oicOfficeIds) {
+                ->where(function ($q) use ($sectionIds, $sectionOicIds, $officeIds, $seniorManagerOfficeIds, $seniorManagerOicOfficeIds, $oicOfficeIds) {
                     if ($sectionIds->isNotEmpty()) {
                         $q->whereHas('employee', function ($q) use ($sectionIds) {
                             $q->whereIn('section_id', $sectionIds);
+                        });
+                    }
+                    if ($sectionOicIds->isNotEmpty()) {
+                        $q->orWhereHas('employee', function ($q) use ($sectionOicIds) {
+                            $q->whereIn('section_id', $sectionOicIds);
                         });
                     }
                     if ($officeIds->isNotEmpty()) {
@@ -53,6 +60,11 @@ class SupervisorController extends Controller
                     if ($seniorManagerOfficeIds->isNotEmpty()) {
                         $q->orWhereHas('employee', function ($q) use ($seniorManagerOfficeIds) {
                             $q->whereIn('office_id', $seniorManagerOfficeIds);
+                        });
+                    }
+                    if ($seniorManagerOicOfficeIds->isNotEmpty()) {
+                        $q->orWhereHas('employee', function ($q) use ($seniorManagerOicOfficeIds) {
+                            $q->whereIn('office_id', $seniorManagerOicOfficeIds);
                         });
                     }
                     if ($oicOfficeIds->isNotEmpty()) {

@@ -64,7 +64,7 @@
                         <div class="notif-header">Notifications</div>
                         @forelse ($unread as $notif)
                             @if ($notif->data['type'] === 'edit_request_submitted')
-                                <a href="{{ route('supervisor.pending') }}" class="notif-item">
+                                <a href="{{ route('supervisor.pending') }}" class="notif-item" data-notif-id="{{ $notif->id }}">
                             @else
                                 @php
                                     $d = $notif->data['target_date'] ?? null;
@@ -72,7 +72,7 @@
                                     $y = $d ? date('Y', strtotime($d)) : date('Y');
                                     $ec = $notif->data['emp_code'] ?? '';
                                 @endphp
-                                <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item">
+                                <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item" data-notif-id="{{ $notif->id }}">
                             @endif
                                 <strong>{{ $notif->data['message'] }}</strong>
                                 <div class="notif-time">{{ $notif->created_at->diffForHumans() }}</div>
@@ -641,6 +641,8 @@
                 reasonInput.placeholder = 'Enter the title of activity';
             } else if (type === 'on_leave') {
                 onLeaveFields.style.display = 'block';
+                reasonLabel.textContent = 'Type of Leave';
+                reasonInput.placeholder = 'Enter leave type';
             } else if (type === 'locator_slip') {
                 locatorSlipFields.style.display = 'block';
                 reasonLabel.textContent = 'Purpose';

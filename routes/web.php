@@ -90,6 +90,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('offices.assign-senior-manager');
     Route::post('/offices/{office}/assign-oic', [App\Http\Controllers\AdminController::class, 'assignOic'])
         ->name('offices.assign-oic');
+    Route::post('/offices/{office}/assign-senior-manager-oic', [App\Http\Controllers\AdminController::class, 'assignSeniorManagerOic'])
+        ->name('offices.assign-senior-manager-oic');
     Route::get('/sections', [App\Http\Controllers\AdminController::class, 'sections'])
         ->name('sections');
     Route::post('/sections', [App\Http\Controllers\AdminController::class, 'storeSection'])
@@ -98,6 +100,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('sections.delete');
     Route::post('/sections/{section}/assign-supervisor', [App\Http\Controllers\AdminController::class, 'assignSectionSupervisor'])
         ->name('sections.assign-supervisor');
+    Route::post('/sections/{section}/assign-oic', [App\Http\Controllers\AdminController::class, 'assignSectionOic'])
+        ->name('sections.assign-oic');
     Route::get('/employees', [App\Http\Controllers\AdminController::class, 'employees'])
         ->name('employees');
     Route::post('/employees/{employee}/assign', [App\Http\Controllers\AdminController::class, 'assignEmployee'])
