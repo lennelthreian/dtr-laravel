@@ -18,7 +18,7 @@
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
                 <h2>{{ $settings['system_name'] ?? 'e-DTR Records' }}</h2>
-                <p>{{ $currentUser->name }}</p>
+                <p>{{ $currentUser->name }} @if($currentUser->is_coa)<span style="display:inline-block;background:#e74c3c;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;vertical-align:middle;margin-left:4px;">COA</span>@endif</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('dtr.dashboard') }}" class="{{ request()->routeIs('dtr.dashboard') ? 'active' : '' }}">
@@ -124,7 +124,7 @@
                 </div>
             @endif
 
-            @if ($isSupervisor && $pendingRequests->isNotEmpty())
+            @if ($pendingRequests->isNotEmpty())
                 <div class="no-print" style="max-width:1000px; margin-bottom:15px;">
                     <div class="card" style="padding:15px 20px;">
                         <h3 style="font-size:14px; margin-bottom:10px; color:#856404; border:none; margin:0 0 10px; padding:0;">Pending Edit Requests ({{ $pendingRequests->count() }})</h3>
@@ -136,7 +136,9 @@
                                         <th>Type</th>
                                         <th>Details</th>
                                         <th>Reason</th>
-                                        <th class="text-center">Action</th>
+                                        @if ($isSupervisor)
+                                            <th class="text-center">Action</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -155,9 +157,12 @@
                     'official_business' => 'Official Business',
                                                 'work_suspension' => 'Work Suspension',
                                                 'locator_slip' => 'Locator Slip',
+                                                'delete_request' => 'Deletion Request',
                                             ];
                                             $details = '';
-                                            if ($req->type === 'time_correction') {
+                                            if ($req->type === 'delete_request' && $req->deletionOf) {
+                                                $details = 'Delete approved edit on ' . $req->deletionOf->target_date->format('M d, Y') . ' (' . ($typeLabels[$req->deletionOf->type] ?? $req->deletionOf->type) . ')';
+                                            } elseif ($req->type === 'time_correction') {
                                                 $details = $req->field . ': ' . ($req->old_value ?: '&mdash;') . ' &rarr; ' . $req->new_value;
                                             } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
                                                 $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
@@ -183,16 +188,15 @@
                                             <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
                                             <td>{!! $details !!}</td>
                                             <td style="max-width:200px;">{{ $req->reason }}</td>
-                                            <td class="text-center nowrap">
-                                                <form method="POST" action="{{ route('dtr.edit-request.approve', $req) }}" style="display:inline">
-                                                    @csrf
-                                                    <button class="btn btn-accent btn-xs">Approve</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('dtr.edit-request.reject', $req) }}" style="display:inline" onsubmit="return confirm('Reject this request?')">
-                                                    @csrf
-                                                    <button class="btn btn-danger btn-xs">Reject</button>
-                                                </form>
-                                            </td>
+                                            @if ($isSupervisor)
+                                                <td class="text-center nowrap">
+                                                    <form method="POST" action="{{ route('dtr.edit-request.approve', $req) }}" style="display:inline">
+                                                        @csrf
+                                                        <button class="btn btn-accent btn-xs">Approve</button>
+                                                    </form>
+                                                    <button type="button" class="btn btn-danger btn-xs" onclick="openRejectModal({{ $req->id }})">Reject</button>
+                                                </td>
+                                            @endif
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -235,6 +239,7 @@
                     'official_business' => 'Official Business',
                                                 'work_suspension' => 'Work Suspension',
                                                 'locator_slip' => 'Locator Slip',
+                                                'delete_request' => 'Deletion Request',
                                             ];
                                             $details = '';
                                             if ($req->type === 'time_correction') {
@@ -265,13 +270,79 @@
                                             <td style="max-width:200px;">{{ $req->reason }}</td>
                                             @if ($isOwnDtr)
                                                 <td>
-                                                    <form method="POST" action="{{ route('dtr.edit-request.destroy', $req->id) }}" onsubmit="return confirm('Delete this approved edit request? This will revert the DTR back to its original value.');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:2px 6px;" title="Delete">&#10005;</button>
-                                                    </form>
+                                                    <button type="button" onclick="openDeletionModal({{ $req->id }}, '{{ $req->target_date->format('M d, Y') }}')" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:2px 6px;" title="Request Deletion">&#10005;</button>
                                                 </td>
                                             @endif
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if ($rejectedRequests->isNotEmpty())
+                <div class="no-print" style="max-width:1000px; margin-bottom:15px;">
+                    <div class="card" style="padding:15px 20px;">
+                        <h3 style="font-size:14px; margin-bottom:10px; color:var(--danger); border:none; margin:0 0 10px; padding:0;">Rejected Edit Requests ({{ $rejectedRequests->count() }})</h3>
+                        <div class="table-wrap">
+                            <table style="font-size:12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Details</th>
+                                        <th>Reason</th>
+                                        <th>Rejection Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($rejectedRequests as $req)
+                                        @php
+                                            $typeLabels = [
+                                                'time_correction' => 'Time Correction',
+                                                'absent' => 'Whole Day Absent',
+                                                'halfday_am' => 'Halfday (AM)',
+                                                'halfday_pm' => 'Halfday (PM)',
+                                                'holiday' => 'Holiday',
+                                                'on_leave' => 'On Leave',
+                                                'wfh' => 'WFH',
+                                                'special_order' => 'Special Order',
+                                                'travel_order' => 'Travel Order',
+                                                'official_business' => 'Official Business',
+                                                'work_suspension' => 'Work Suspension',
+                                                'locator_slip' => 'Locator Slip',
+                                                'delete_request' => 'Deletion Request',
+                                            ];
+                                            $details = '';
+                                            if ($req->type === 'time_correction') {
+                                                $details = $req->field . ': ' . ($req->old_value ?: '&mdash;') . ' &rarr; ' . $req->new_value;
+                                            } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
+                                                $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
+                                                $details = $label . ': ' . $req->new_value;
+                                            } elseif ($req->type === 'on_leave' && $req->new_value) {
+                                                $details = 'On Leave (' . $req->new_value . ' hrs)';
+                                            } elseif ($req->type === 'locator_slip') {
+                                                $lsLabel = $req->field === 'personal' ? 'Personal' : 'Official';
+                                                $timeLeft = $req->ls_time_left ? date('h:i A', strtotime($req->ls_time_left)) : '';
+                                                $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
+                                                $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                                                $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
+                                            } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'official_business']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                                $details = $typeLabels[$req->type] ?? $req->type;
+                                                if ($req->new_value === 'am') $details .= ' (AM)';
+                                                elseif ($req->new_value === 'pm') $details .= ' (PM)';
+                                            } else {
+                                                $details = $typeLabels[$req->type] ?? $req->type;
+                                            }
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $req->target_date->format('M d, Y') }}</td>
+                                            <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
+                                            <td>{!! $details !!}</td>
+                                            <td style="max-width:200px;">{{ $req->reason }}</td>
+                                            <td style="max-width:200px;color:var(--danger);">{{ $req->rejection_reason ?? '&mdash;' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -520,6 +591,25 @@
         </div>
     </div>
 
+    <div id="deletionRequestModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Request Deletion of Approved Edit</h2>
+            <p class="modal-sub" id="deletionDayLabel">Request deletion for </p>
+            <form method="POST" action="" id="deletionForm">
+                @csrf
+                <input type="hidden" name="edit_request_id" id="deletion_request_id">
+                <div class="form-group">
+                    <label for="deletion_reason">Reason for deletion</label>
+                    <textarea name="reason" id="deletion_reason" required rows="3" placeholder="Explain why this approved edit should be deleted" class="form-control"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeDeletionModal()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Submit Deletion Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openEditRequest(day, amIn, amOut, pmIn, pmOut) {
             var dateStr = ('{{ $year }}' + '-' + String('{{ $month }}').padStart(2, '0') + '-' + String(day).padStart(2, '0'));
@@ -658,8 +748,76 @@
         document.getElementById('editRequestModal').addEventListener('click', function(e) {
             if (e.target === this) closeEditRequest();
         });
+
+        function openDeletionModal(id, dateLabel) {
+            document.getElementById('deletion_request_id').value = id;
+            document.getElementById('deletionDayLabel').textContent = 'Request deletion for ' + dateLabel;
+            var form = document.getElementById('deletionForm');
+            form.action = '{{ url("dtr/edit-request") }}/' + id + '/request-deletion';
+            document.getElementById('deletionRequestModal').classList.add('active');
+        }
+
+        function closeDeletionModal() {
+            document.getElementById('deletionRequestModal').classList.remove('active');
+            document.getElementById('deletion_reason').value = '';
+        }
+
+        document.getElementById('deletionRequestModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeletionModal();
+        });
+
     </script>
     @endif
+
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Reject Request</h2>
+            <p style="margin-bottom:12px;color:var(--gray-600);">Provide a reason for rejecting this request:</p>
+            <textarea id="rejectionReason" rows="3" class="form-control" placeholder="Reason for rejection..." style="width:100%;resize:vertical;"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitReject()">Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var rejectId = null;
+
+        function openRejectModal(id) {
+            rejectId = id;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').classList.remove('active');
+            rejectId = null;
+        }
+
+        function submitReject() {
+            var reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                alert('Please provide a reason for rejection.');
+                return;
+            }
+            fetch('/dtr/edit-request/' + rejectId + '/reject', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ rejection_reason: reason })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            }).catch(function() { location.reload(); });
+        }
+
+        document.getElementById('rejectModal').addEventListener('click', function(e) {
+            if (e.target === this) closeRejectModal();
+        });
+    </script>
 
     <script>
         function toggleNotif() {

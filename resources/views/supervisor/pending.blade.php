@@ -18,7 +18,7 @@
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
                 <h2>Supervisor</h2>
-                <p>{{ $currentUser->name }}</p>
+                <p>{{ $currentUser->name }} @if($currentUser->is_coa)<span style="display:inline-block;background:#e74c3c;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;vertical-align:middle;margin-left:4px;">COA</span>@endif</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('supervisor.pending') }}" class="active">
@@ -134,6 +134,7 @@
                                                     'special_order' => 'Special Order',
                                                     'travel_order' => 'Travel Order',
                                                     'official_business' => 'Official Business',
+                                                    'delete_request' => 'Deletion Request',
                                                 ];
                                                 $details = '';
                                                 if ($req->type === 'time_correction') {
@@ -141,6 +142,8 @@
                                                 } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
                                                     $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
                                                     $details = $label . ': ' . $req->new_value;
+                                                } elseif ($req->type === 'delete_request' && $req->deletionOf) {
+                                                    $details = 'Delete approved edit on ' . $req->deletionOf->target_date->format('M d, Y') . ' (' . ($typeLabels[$req->deletionOf->type] ?? $req->deletionOf->type) . ')';
                                                 } else {
                                                     $details = $typeLabels[$req->type] ?? $req->type;
                                                 }
@@ -154,8 +157,8 @@
                                                 <td style="font-size:12px; color:var(--gray-500);">{{ $req->created_at->diffForHumans() }}</td>
                                                 <td class="text-center nowrap">
                                                     <button type="button" class="btn btn-outline btn-xs" onclick="viewRequest({{ $req->id }})">View</button>
-                                                    <button class="btn btn-accent btn-xs" onclick="singleApprove({{ $req->id }})">Approve</button>
-                                                    <button class="btn btn-danger btn-xs" onclick="singleReject({{ $req->id }})">Reject</button>
+                                                    <button type="button" class="btn btn-accent btn-xs" onclick="singleApprove({{ $req->id }})">Approve</button>
+                                                    <button type="button" class="btn btn-danger btn-xs" onclick="singleReject({{ $req->id }})">Reject</button>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -192,6 +195,18 @@
         </div>
     </div>
 
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Reject Request</h2>
+            <p style="margin-bottom:12px;color:var(--gray-600);">Provide a reason for rejecting this request:</p>
+            <textarea id="rejectionReason" rows="3" class="form-control" placeholder="Reason for rejection..." style="width:100%;resize:vertical;"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeReject()">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitReject()">Reject</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         var requests = @json($grouped->flatten());
 
@@ -208,7 +223,8 @@
                 wfh: 'WFH',
                 special_order: 'Special Order',
                 travel_order: 'Travel Order',
-                official_business: 'Official Business'
+                official_business: 'Official Business',
+                delete_request: 'Deletion Request'
             };
             document.getElementById('viewType').textContent = typeLabels[req.type] || req.type;
             document.getElementById('viewDate').textContent = req.target_date;
@@ -333,18 +349,41 @@
             }).catch(function() { location.reload(); });
         }
 
+        var rejectId = null;
+
         function singleReject(id) {
-            if (!confirm('Reject this request?')) return;
-            fetch('/dtr/edit-request/' + id + '/reject', {
+            rejectId = id;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+
+        function closeReject() {
+            document.getElementById('rejectModal').classList.remove('active');
+            rejectId = null;
+        }
+
+        function submitReject() {
+            var reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                alert('Please provide a reason for rejection.');
+                return;
+            }
+            fetch('/dtr/edit-request/' + rejectId + '/reject', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                }
+                },
+                body: JSON.stringify({ rejection_reason: reason })
             }).then(function(r) { return r.json(); }).then(function(data) {
                 if (data.success) location.reload();
             }).catch(function() { location.reload(); });
         }
+
+        document.getElementById('rejectModal').addEventListener('click', function(e) {
+            if (e.target === this) closeReject();
+        });
 
         function toggleTheme() {
             var html = document.documentElement;

@@ -30,6 +30,7 @@ class EditRequestApproved extends Notification
             'wfh' => 'WFH',
             'special_order' => 'Special Order',
             'travel_order' => 'Travel Order',
+            'delete_request' => 'Deletion Request',
         ];
 
         $employee = $this->editRequest->employee;

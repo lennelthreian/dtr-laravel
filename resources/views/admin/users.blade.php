@@ -24,6 +24,7 @@
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
                 <a href="{{ route('admin.users') }}" class="active"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
+                <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -65,7 +66,10 @@
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Super Admin</th>
-                                <th class="text-center">Action</th>
+                                <th>COA</th>
+                                <th class="text-center">Super Action</th>
+                                <th class="text-center">COA Action</th>
+                                <th class="text-center">Password</th>
                             </tr>
                         </thead>
                         <tbody id="userTableBody">
@@ -77,6 +81,13 @@
                                     <td>
                                         @if ($user->is_super)
                                             <span style="color:var(--success);font-weight:600;">Yes</span>
+                                        @else
+                                            <span class="text-muted">No</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($user->is_coa)
+                                            <span style="color:#e74c3c;font-weight:600;">Yes</span>
                                         @else
                                             <span class="text-muted">No</span>
                                         @endif
@@ -95,9 +106,22 @@
                                             </form>
                                         @endif
                                     </td>
+                                    <td class="text-center">
+                                        <form method="POST" action="{{ route('admin.users.toggle-coa', $user) }}" onsubmit="return confirm('{{ $user->is_coa ? 'Remove' : 'Grant' }} COA privileges for {{ $user->name }}?')">
+                                            @csrf
+                                            @if ($user->is_coa)
+                                                <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);">Revoke</button>
+                                            @else
+                                                <button class="btn btn-outline btn-sm" style="color:#e74c3c;border-color:#e74c3c;">Grant</button>
+                                            @endif
+                                        </form>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-outline btn-sm" style="color:#f39c12;border-color:#f39c12;" onclick="openResetModal('{{ $user->name }}', '{{ route('admin.users.reset-password', $user) }}')">Reset</button>
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">No users found.</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted" style="padding:24px;">No users found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -106,7 +130,47 @@
         </div>
     </div>
 
+    <form id="resetPasswordForm" method="POST" action="" style="display:none;">
+        @csrf
+    </form>
+
+    <div id="resetPasswordModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Reset Password</h2>
+            <p style="margin-bottom:16px;color:var(--gray-600);">
+                Reset password for <strong id="resetUserName"></strong> to
+                <code style="background:var(--gray-100);padding:2px 8px;border-radius:4px;font-size:14px;">password</code>?
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeResetModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitReset()">Confirm Reset</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        var resetUrl = '';
+
+        function openResetModal(name, url) {
+            resetUrl = url;
+            document.getElementById('resetUserName').textContent = name;
+            document.getElementById('resetPasswordModal').classList.add('active');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').classList.remove('active');
+            resetUrl = '';
+        }
+
+        function submitReset() {
+            document.getElementById('resetPasswordForm').action = resetUrl;
+            document.getElementById('resetPasswordForm').submit();
+        }
+
+        document.getElementById('resetPasswordModal').addEventListener('click', function(e) {
+            if (e.target === this) closeResetModal();
+        });
+
         function toggleTheme() {
             var html = document.documentElement;
             var isDark = html.getAttribute('data-theme') === 'dark';

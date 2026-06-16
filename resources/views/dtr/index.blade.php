@@ -18,7 +18,7 @@
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
                 <h2>{{ $settings['system_name'] ?? 'e-DTR Records' }}</h2>
-                <p>{{ $currentUser->name }}</p>
+                <p>{{ $currentUser->name }} @if($currentUser->is_coa)<span style="display:inline-block;background:#e74c3c;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;vertical-align:middle;margin-left:4px;">COA</span>@endif</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('dtr.dashboard') }}" class="{{ request()->routeIs('dtr.dashboard') ? 'active' : '' }}">
@@ -104,13 +104,52 @@
             @if (session('success'))
                 <div class="alert alert-success no-print" style="max-width:1000px;">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+                <div class="alert alert-danger no-print" style="max-width:1000px;">{{ session('error') }}</div>
+            @endif
+
+            @php $coaPending = session('coa_pending'); @endphp
+            @if ($coaPending)
+                <div id="coaPendingModal" class="modal-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+                    <div class="modal-box" style="background:#fff;border-radius:10px;padding:28px;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+                            <span style="font-size:28px;">&#9888;</span>
+                            <h3 style="margin:0;font-size:18px;color:#c0392b;">DTR Cannot Be Generated</h3>
+                        </div>
+                        <p style="margin-bottom:8px;color:#333;">
+                            Employee <strong>{{ $coaPending['employee_name'] }}</strong> ({{ $coaPending['employee_code'] }}) has pending edit requests that must be resolved first:
+                        </p>
+                        <ul style="margin:12px 0 20px 20px;color:#555;line-height:1.7;">
+                            @foreach ($coaPending['requests'] as $req)
+                                <li>
+                                    <strong>{{ ucfirst(str_replace('_', ' ', $req['type'])) }}</strong>
+                                    &mdash; {{ $req['target_date'] }}
+                                    (ID: {{ $req['id'] }})
+                                </li>
+                            @endforeach
+                        </ul>
+                        <p style="font-size:13px;color:#888;">All pending requests must be approved or rejected by a supervisor before the DTR can be generated.</p>
+                        <div style="text-align:right;margin-top:16px;">
+                            <button onclick="closeCoaModal()" class="btn btn-primary" style="padding:8px 24px;font-size:14px;">OK</button>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    function closeCoaModal() {
+                        document.getElementById('coaPendingModal').style.display = 'none';
+                    }
+                    document.getElementById('coaPendingModal').addEventListener('click', function(e) {
+                        if (e.target === this) closeCoaModal();
+                    });
+                </script>
+            @endif
 
             <div class="dtr-layout">
                 <div class="dtr-sidebar-form no-print">
                     <div class="card">
                         <h2>{{ $currentUser->is_super || $isSupervisor ? 'Select Employee' : 'My Daily Time Record' }}</h2>
                         <form method="get" action="{{ route('dtr.index') }}" class="dtr-form">
-                            @if ($currentUser->is_super || $isSupervisor)
+                            @if ($currentUser->is_super || $currentUser->is_coa || $isSupervisor)
                                 <div class="form-group">
                                     <label for="emp">Employee</label>
                                     <select name="emp" id="emp" required class="form-control">
@@ -201,6 +240,7 @@
                                                             'official_business' => 'Official Business',
                                                             'work_suspension' => 'Work Suspension',
                                                             'locator_slip' => 'Locator Slip',
+                                                            'delete_request' => 'Deletion Request',
                                                         ];
                                                         $details = '';
                                                         if ($req->type === 'time_correction') {
@@ -231,11 +271,7 @@
                                                         <td style="max-width:200px;">{{ $req->reason }}</td>
                                                         @if ($isOwnDtr)
                                                             <td>
-                                                                <form method="POST" action="{{ route('dtr.edit-request.destroy', $req->id) }}" onsubmit="return confirm('Delete this approved edit request? This will revert the DTR back to its original value.');">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:2px 6px;" title="Delete">&#10005;</button>
-                                                                </form>
+                                                                <button type="button" onclick="openDeletionModal({{ $req->id }}, '{{ $req->target_date->format('M d, Y') }}')" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:2px 6px;" title="Request Deletion">&#10005;</button>
                                                             </td>
                                                         @endif
                                                     </tr>
@@ -484,6 +520,25 @@
         </div>
     </div>
 
+    <div id="deletionRequestModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>Request Deletion of Approved Edit</h2>
+            <p class="modal-sub" id="deletionDayLabel">Request deletion for </p>
+            <form method="POST" action="" id="deletionForm">
+                @csrf
+                <input type="hidden" name="edit_request_id" id="deletion_request_id">
+                <div class="form-group">
+                    <label for="deletion_reason">Reason for deletion</label>
+                    <textarea name="reason" id="deletion_reason" required rows="3" placeholder="Explain why this approved edit should be deleted" class="form-control"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeDeletionModal()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Submit Deletion Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openEditRequest(day, amIn, amOut, pmIn, pmOut) {
             var dateStr = ('{{ $year }}' + '-' + String('{{ $month }}').padStart(2, '0') + '-' + String(day).padStart(2, '0'));
@@ -621,6 +676,23 @@
 
         document.getElementById('editRequestModal').addEventListener('click', function(e) {
             if (e.target === this) closeEditRequest();
+        });
+
+        function openDeletionModal(id, dateLabel) {
+            document.getElementById('deletion_request_id').value = id;
+            document.getElementById('deletionDayLabel').textContent = 'Request deletion for ' + dateLabel;
+            var form = document.getElementById('deletionForm');
+            form.action = '{{ url("dtr/edit-request") }}/' + id + '/request-deletion';
+            document.getElementById('deletionRequestModal').classList.add('active');
+        }
+
+        function closeDeletionModal() {
+            document.getElementById('deletionRequestModal').classList.remove('active');
+            document.getElementById('deletion_reason').value = '';
+        }
+
+        document.getElementById('deletionRequestModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeletionModal();
         });
     </script>
     @endif

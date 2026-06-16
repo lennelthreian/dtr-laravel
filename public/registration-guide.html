@@ -1,0 +1,447 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBLISTTDA e-DTR System User Guide</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.guide {
+  max-width: 820px;
+  width: 100%;
+  border-radius: 20px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(135deg, #1b4332 0%, #40916c 50%, #2d6a4f 100%);
+  padding: 36px 40px;
+  color: #fff;
+  text-align: center;
+}
+.header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.header p { font-size: 14px; opacity: 0.85; }
+
+.section {
+  background: #ffffff;
+  padding: 32px 40px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.section:last-of-type { border-bottom: none; }
+.section-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1b4332;
+  margin-bottom: 20px;
+  padding-left: 16px;
+  border-left: 4px solid #40916c;
+}
+.step {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+.step:last-child { margin-bottom: 0; }
+.step-num {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(45,106,79,0.3);
+}
+.step-body { flex:1; }
+.step-body h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+.step-body p {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+.step-body .url {
+  display: inline-block;
+  margin-top: 4px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-family: 'Cascadia Code','Consolas',monospace;
+  font-size: 12.5px;
+  color: #2d6a4f;
+  font-weight: 600;
+}
+.fields-box {
+  margin-top: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 20px;
+}
+.fields-box .field {
+  font-size: 12.5px;
+  color: #334155;
+  padding: 2px 0;
+}
+.fields-box .field .req { color: #dc2626; font-weight: 700; margin-right: 2px; }
+.fields-box .field .opt { color: #94a3b8; font-size: 11px; margin-left: 2px; }
+
+.edit-types {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 16px;
+}
+.edit-types li {
+  font-size: 12.5px;
+  color: #334155;
+  padding: 2px 0;
+}
+.edit-types li::marker { color: #40916c; }
+
+.dash-cards {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.dash-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.dash-card .val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1b4332;
+}
+.dash-card .lbl {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 0 0 20px 20px;
+}
+.footer .note { font-size: 12.5px; color: #64748b; line-height: 1.5; }
+.footer .badge {
+  background: #dcfce7;
+  color: #166534;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+ul { padding-left: 16px; }
+</style>
+</head>
+<body>
+<div class="guide">
+
+<!-- HEADER -->
+<div class="header">
+  <h1>MBLISTTDA e-DTR System User Guide</h1>
+  <p style="margin-bottom:4px;">Registration &amp; Daily Time Record Management</p>
+  <p style="font-size:13px;opacity:0.8;font-family:'Cascadia Code','Consolas',monospace;">http://192.168.1.151:8000</p>
+</div>
+
+<!-- SECTION 1: REGISTRATION -->
+<div class="section">
+  <div class="section-title">How to Register</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Go to the Registration Page</h3>
+      <p>Open your browser and navigate to <strong>http://192.168.1.151:8000</strong>. Click <strong>"Register"</strong> on the login page, or go directly to:</p>
+      <span class="url">http://192.168.1.151:8000/register</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Fill Out the Registration Form</h3>
+      <p>Enter your personal and employment details. Fields marked with <strong style="color:#dc2626">*</strong> are required. Click <strong>"Register"</strong> when done.</p>
+      <p style="margin-bottom:8px;">
+        <a href="https://docs.google.com/spreadsheets/d/1NgVewIydHOhz4mGF2xvkykXFnWyQs-kGtumdxCrN18w/edit?usp=sharing" target="_blank" style="display:inline-block;background:#2d6a4f;color:#fff;padding:7px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">Click Here to Look Up Your Biometrics ID</a>
+      </p>
+      <div class="fields-box">
+        <div class="field"><span class="req">*</span> First Name</div>
+        <div class="field"><span class="req">*</span> Last Name</div>
+        <div class="field">Middle Name <span class="opt">(optional)</span></div>
+        <div class="field"><span class="req">*</span> Biometrics ID <span style="color:#94a3b8;font-size:10px;">(Refer to the Biometrics ID Provided by the IT Staff)</span></div>
+        <div class="field"><span class="req">*</span> Username</div>
+        <div class="field"><span class="req">*</span> Email Address</div>
+        <div class="field"><span class="req">*</span> Position (e.g. PEO III)</div>
+        <div class="field"><span class="req">*</span> Sex (Male / Female)</div>
+        <div class="field"><span class="req">*</span> Office</div>
+        <div class="field"><span class="req">*</span> Section</div>
+        <div class="field"><span class="req">*</span> Password (min. 8 characters)</div>
+        <div class="field"><span class="req">*</span> Confirm Password</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>You're In!</h3>
+      <p>After successful registration, you are <strong>automatically logged in</strong> and taken to your DTR Dashboard. No admin approval or email verification is needed.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: VIEW & MANAGE DTR -->
+<div class="section">
+  <div class="section-title">How to View &amp; Manage Your Daily Time Record</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Open the e-DTR Records Page</h3>
+      <p>From the sidebar, click <strong>"e-DTR Records"</strong> or go to:</p>
+      <span class="url">http://192.168.1.151:8000/dtr</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Select Month and Year</h3>
+      <p>Use the <strong>Month</strong> and <strong>Year</strong> dropdowns to choose which period you want to view.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Click "Generate DTR"</h3>
+      <p>Your Daily Time Record for the selected month will appear showing AM/PM in/out times, total hours worked, and any remarks (Late, Undertime, Absent, etc.).</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Print or Save as PDF</h3>
+      <p>Once your DTR is displayed, click the <strong>"Print / Save PDF"</strong> button in the top bar. Use your browser's print dialog to save as PDF or print on paper.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Adjust Print Scale to Fit the Paper</h3>
+      <p>When the print dialog opens, configure these settings so the DTR fits on the page:</p>
+      <div class="fields-box" style="grid-template-columns:1fr;gap:8px;">
+        <div class="field">1. Set <strong>Destination</strong> to your printer (e.g. "EPSON L3210", "HP LaserJet") or <strong>"Save as PDF"</strong></div>
+        <div class="field">2. Set <strong>Layout</strong> to <strong>Landscape</strong></div>
+        <div class="field">3. Set <strong>Margins</strong> to <strong>None</strong> or <strong>Minimum</strong></div>
+        <div class="field">4. Under <strong>More settings</strong>, set <strong>Scale</strong> to <strong>70-80%</strong> (adjust until the DTR fits on one page)</div>
+        <div class="field">5. Check <strong>"Background graphics"</strong> so colors and badges appear</div>
+        <div class="field">6. Click <strong>Print</strong> or <strong>Save</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: SUBMIT DTR EDIT REQUESTS -->
+<div class="section">
+  <div class="section-title">How to Submit DTR Edit Requests</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Generate Your DTR First</h3>
+      <p>Go to the DTR page, select your month/year, and click <strong>"Generate DTR"</strong> so the table is displayed.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Click the Edit (Pencil) Icon</h3>
+      <p>Each day row has a <strong>pencil icon</strong>. Click it to open the Edit Request form for that date.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Choose the Type of Edit</h3>
+      <p>Select from the following edit types:</p>
+      <ul class="edit-types">
+        <li>Time Correction (AM/PM in/out)</li>
+        <li>Absent (whole day or half-day)</li>
+        <li>On Leave (with leave hours)</li>
+        <li>Work From Home (WFH)</li>
+        <li>Special Order (with SO number)</li>
+        <li>Travel Order (with TO number)</li>
+        <li>Official Business (with OB number)</li>
+        <li>Locator Slip (Official/Personal)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Provide a Reason &amp; Submit</h3>
+      <p>Always include a <strong>reason</strong> in the text area. Click <strong>"Submit Request"</strong>. Your edit request will be forwarded to your supervisor for approval.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Track Your Requests</h3>
+      <p>Approved edits immediately update your DTR. Pending requests are shown to you and your supervisor. Rejected requests appear in a table below your DTR with the rejection reason.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: DASHBOARD -->
+<div class="section">
+  <div class="section-title">How to Use the Dashboard</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Open Your Dashboard</h3>
+      <p>From the sidebar, click <strong>"Dashboard"</strong> or go to:</p>
+      <span class="url">http://192.168.1.151:8000/dtr/dashboard</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>View Your Monthly Summary</h3>
+      <p>At the top, stat cards show your attendance summary for the current month:</p>
+      <div class="dash-cards">
+        <div class="dash-card"><div class="val">...</div><div class="lbl">Days Present</div></div>
+        <div class="dash-card"><div class="val">...</div><div class="lbl">Total Hours</div></div>
+        <div class="dash-card"><div class="val">...</div><div class="lbl">Total Days</div></div>
+        <div class="dash-card"><div class="val">4/5</div><div class="lbl">Work Week</div></div>
+        <div class="dash-card"><div class="val" style="color:#b91c1c;">...</div><div class="lbl">Days Late</div></div>
+        <div class="dash-card"><div class="val" style="color:#92400e;">...</div><div class="lbl">Undertime Days</div></div>
+        <div class="dash-card"><div class="val" style="color:#991b1b;">...</div><div class="lbl">Days Absent</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Browse the Calendar</h3>
+      <p>A monthly calendar grid shows each day color-coded by status: green for today, blue for holidays, red for absent, yellow for WFH, purple for half-day, and more. Hover or tap a day to see punch times and remarks.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Navigate Months</h3>
+      <p>Use the <strong>left/right arrow buttons</strong> above the calendar to switch between months.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Go to Full DTR View</h3>
+      <p>Click <strong>"View Full DTR"</strong> to open the detailed Daily Time Record for the current month.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5: EDIT PROFILE -->
+<div class="section">
+  <div class="section-title">How to Edit Your Profile &amp; Change Password</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Go to My Profile</h3>
+      <p>From the sidebar, click <strong>"My Profile"</strong> or go to:</p>
+      <span class="url">http://192.168.1.151:8000/profile</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Update Your Details</h3>
+      <p>You can edit your name, sex, email, position, and honorific prefix/suffix. All fields except middle name and honorifics are required. Click <strong>"Update Profile"</strong> to save.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Change Your Password</h3>
+      <p>Click the <strong>"Change Password"</strong> link. Enter your current password, new password (min. 8 characters), and confirm. Click <strong>"Change Password"</strong> to save.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Return to DTR</h3>
+      <p>Use the sidebar navigation or the <strong>"Back to Profile"</strong> link to return to the DTR system.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="note">
+    <strong style="color:#b45309;">DRY-RUN STAGE:</strong> This system is currently undergoing dry-run testing. Full deployment will follow once all features are finalized and supervisor feedback has been incorporated.<br><br>
+    <strong>Need help?</strong> Contact your IT Staff or Supervisor.<br>
+    Biometrics ID, Username, and Email must be unique. Password requires 8+ characters.<br>
+    <strong style="color:#b45309;">Important:</strong> Supervisor roles (Section Head, Office/Division Head, Senior Manager, and Agency Head) are assigned only by the <strong>Super Admin / HR Account</strong> — not during registration.
+  </div>
+  <div class="badge">MBLISTTDA e-DTR System</div>
+</div>
+<div style="background:#f8fafc;padding:6px 40px 12px;text-align:right;">
+  <span style="font-style:italic;font-size:12px;color:#64748b;">Prepared by: L.T. Estabaya</span><br>
+  <span style="font-style:italic;font-size:11px;color:#94a3b8;">Developer</span>
+</div>
+
+</div>
+</body>
+</html>

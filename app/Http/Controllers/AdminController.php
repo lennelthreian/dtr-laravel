@@ -9,6 +9,7 @@ use App\Models\Office;
 use App\Models\PasswordResetRequest;
 use App\Models\Section;
 use App\Models\User;
+use App\Models\Memo;
 use App\Models\UserLog;
 use App\Services\UserLogService;
 use Illuminate\Http\Request;
@@ -377,6 +378,76 @@ class AdminController extends Controller
 
         return redirect()->route('admin.users')
             ->with('success', "Super admin privileges {$action} for {$user->name}.");
+    }
+
+    public function toggleCoa(User $user)
+    {
+        $user->update(['is_coa' => !$user->is_coa]);
+
+        $action = $user->is_coa ? 'granted' : 'removed';
+        app(UserLogService::class)->log(auth()->id(), 'update', "COA privileges {$action} for {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "COA privileges {$action} for {$user->name}.");
+    }
+
+    public function monitoring(Request $request)
+    {
+        $month = (int) $request->input('month', date('m'));
+        $year = (int) $request->input('year', date('Y'));
+
+        $employees = DtrUser::where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $dtrController = app(DtrController::class);
+        $stats = [];
+        foreach ($employees as $emp) {
+            $result = $dtrController->getEmployeeMonthlyStats($emp->emp_code, $year, $month);
+            if ($result) {
+                $stats[] = $result;
+            }
+        }
+
+        return view('admin.monitoring', compact('stats', 'month', 'year'));
+    }
+
+    public function issueMemo(Request $request)
+    {
+        $data = $request->validate([
+            'employee_id' => 'required|exists:dtr_users,id',
+            'notes' => 'nullable|string|max:1000',
+            'month' => 'nullable|integer|between:1,12',
+            'year' => 'nullable|integer|between:2000,2100',
+        ]);
+
+        $employee = DtrUser::findOrFail($data['employee_id']);
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+        $monthYear = sprintf('%04d-%02d', $year, $month);
+
+        Memo::create([
+            'employee_id' => $data['employee_id'],
+            'issued_by' => auth()->id(),
+            'notes' => $data['notes'],
+            'month_year' => $monthYear,
+        ]);
+
+        app(UserLogService::class)->log(auth()->id(), 'create', "Memo issued to {$employee->full_name}", Memo::class, null);
+
+        return redirect()->route('admin.monitoring', ['month' => $month, 'year' => $year])
+            ->with('success', "Memo issued to {$employee->full_name}.");
+    }
+
+    public function resetUserPassword(User $user)
+    {
+        $user->update(['password' => Hash::make('password')]);
+
+        app(UserLogService::class)->log(auth()->id(), 'update', "Password reset for {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "Password for {$user->name} reset to \"password\".");
     }
 
     public function approvePasswordReset(PasswordResetRequest $resetRequest)

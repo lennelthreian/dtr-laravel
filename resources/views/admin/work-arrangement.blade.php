@@ -24,6 +24,7 @@
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
+                <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}" class="active"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>

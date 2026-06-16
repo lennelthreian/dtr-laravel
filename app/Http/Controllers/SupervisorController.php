@@ -20,7 +20,7 @@ class SupervisorController extends Controller
         $user = auth()->user();
 
         if ($user->is_super) {
-            $requests = DtrEditRequest::with('employee')
+            $requests = DtrEditRequest::with('employee', 'deletionOf')
                 ->pending()
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -40,7 +40,7 @@ class SupervisorController extends Controller
             $seniorManagerOicOfficeIds = Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id');
             $oicOfficeIds = Office::where('oic_id', $dtrUser->id)->pluck('id');
 
-            $requests = DtrEditRequest::with('employee')
+            $requests = DtrEditRequest::with('employee', 'deletionOf')
                 ->where(function ($q) use ($sectionIds, $sectionOicIds, $officeIds, $seniorManagerOfficeIds, $seniorManagerOicOfficeIds, $oicOfficeIds) {
                     if ($sectionIds->isNotEmpty()) {
                         $q->whereHas('employee', function ($q) use ($sectionIds) {
