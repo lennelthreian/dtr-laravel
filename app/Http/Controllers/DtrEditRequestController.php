@@ -147,12 +147,22 @@ class DtrEditRequestController extends Controller
     public function approve(DtrEditRequest $editRequest, Request $request)
     {
         $this->ensureSupervisor($editRequest);
+        $this->preventSelfApproval($editRequest);
+
+        $isDeletion = $editRequest->type === 'delete_request' && $editRequest->deletion_of_request_id;
 
         $editRequest->update([
             'status' => 'approved',
             'reviewer_id' => $this->getSupervisorDtrUserId(),
             'reviewed_at' => now(),
         ]);
+
+        if ($isDeletion) {
+            $originalRequest = DtrEditRequest::find($editRequest->deletion_of_request_id);
+            if ($originalRequest) {
+                $originalRequest->delete();
+            }
+        }
 
         $this->notifyEmployee($editRequest, 'approved');
 
@@ -170,15 +180,20 @@ class DtrEditRequestController extends Controller
         ]);
 
         $approved = 0;
+        $skipped = 0;
         foreach ($data['ids'] as $id) {
             $editRequest = DtrEditRequest::find($id);
             if (!$editRequest || $editRequest->status !== 'pending') continue;
 
             try {
                 $this->ensureSupervisor($editRequest);
+                $this->preventSelfApproval($editRequest);
             } catch (\Exception $e) {
+                $skipped++;
                 continue;
             }
+
+            $isDeletion = $editRequest->type === 'delete_request' && $editRequest->deletion_of_request_id;
 
             $editRequest->update([
                 'status' => 'approved',
@@ -186,16 +201,24 @@ class DtrEditRequestController extends Controller
                 'reviewed_at' => now(),
             ]);
 
+            if ($isDeletion) {
+                $originalRequest = DtrEditRequest::find($editRequest->deletion_of_request_id);
+                if ($originalRequest) {
+                    $originalRequest->delete();
+                }
+            }
+
             $this->notifyEmployee($editRequest, 'approved');
             $approved++;
         }
 
-        return back()->with('success', "$approved edit request(s) approved.");
+        return back()->with('success', "$approved edit request(s) approved." . ($skipped > 0 ? " $skipped request(s) skipped (self-approval not allowed)." : ""));
     }
 
     public function reject(Request $request, DtrEditRequest $editRequest)
     {
         $this->ensureSupervisor($editRequest);
+        $this->preventSelfApproval($editRequest);
 
         $data = $request->validate([
             'rejection_reason' => 'nullable|string|max:500',
@@ -216,9 +239,47 @@ class DtrEditRequestController extends Controller
         return back()->with('success', 'Edit request rejected.');
     }
 
+    public function requestDeletion(Request $request, DtrEditRequest $editRequest)
+    {
+        $data = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $employee = DtrUser::where('emp_code', $user->emp_code)->firstOrFail();
+
+        if (!$employee || $editRequest->employee_id !== $employee->id) {
+            abort(403, 'You can only request deletion of your own edit requests.');
+        }
+
+        if ($editRequest->status !== 'approved') {
+            return back()->with('error', 'Only approved requests can be requested for deletion.');
+        }
+
+        $deletionRequest = DtrEditRequest::create([
+            'employee_id' => $employee->id,
+            'type' => 'delete_request',
+            'target_date' => $editRequest->target_date,
+            'field' => '',
+            'old_value' => '',
+            'new_value' => '',
+            'reason' => $data['reason'],
+            'deletion_of_request_id' => $editRequest->id,
+        ]);
+
+        $this->notifySupervisors($deletionRequest, $employee);
+
+        return back()->with('success', 'Deletion request submitted for supervisor approval.');
+    }
+
     public function destroy(DtrEditRequest $editRequest)
     {
         $user = auth()->user();
+
+        if ($editRequest->status === 'approved' && !$user->is_super) {
+            abort(403, 'Approved requests cannot be directly deleted. Use the deletion request process.');
+        }
+
         $employee = DtrUser::where('emp_code', $user->emp_code)->first();
 
         if (!$user->is_super) {
@@ -386,6 +447,17 @@ class DtrEditRequestController extends Controller
         }
 
         abort(403, 'You are not the supervisor of this employee.');
+    }
+
+    private function preventSelfApproval(DtrEditRequest $editRequest)
+    {
+        $user = auth()->user();
+        if ($user->is_super) return;
+
+        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        if ($dtrUser && $editRequest->employee_id === $dtrUser->id) {
+            abort(403, 'You cannot approve or reject your own edit request.');
+        }
     }
 
     private function getSupervisorDtrUserId()

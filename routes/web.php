@@ -47,11 +47,15 @@ Route::middleware('auth')->group(function () {
         ->name('dtr.edit-request.approve');
     Route::post('/dtr/edit-request/{edit_request}/reject', [App\Http\Controllers\DtrEditRequestController::class, 'reject'])
         ->name('dtr.edit-request.reject');
+    Route::post('/dtr/edit-request/{edit_request}/request-deletion', [App\Http\Controllers\DtrEditRequestController::class, 'requestDeletion'])
+        ->name('dtr.edit-request.request-deletion');
     Route::delete('/dtr/edit-request/{edit_request}', [App\Http\Controllers\DtrEditRequestController::class, 'destroy'])
         ->name('dtr.edit-request.destroy');
     Route::post('/dtr/edit-requests/batch-approve', [App\Http\Controllers\DtrEditRequestController::class, 'batchApprove'])
         ->name('dtr.edit-requests.batch-approve');
 
+    Route::post('/dtr/toggle-share', [App\Http\Controllers\DtrController::class, 'toggleShare'])
+        ->name('dtr.toggle-share');
     Route::post('/dtr/toggle-work-week', [App\Http\Controllers\DtrController::class, 'toggleWorkWeek'])
         ->name('dtr.toggle-work-week');
     Route::post('/dtr/toggle-day-work-week', [App\Http\Controllers\DtrController::class, 'toggleDayWorkWeek'])
@@ -130,8 +134,16 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('password-reset-requests');
     Route::post('/password-reset-requests/{resetRequest}/reset', [App\Http\Controllers\AdminController::class, 'approvePasswordReset'])
         ->name('password-reset-requests.reset');
+    Route::get('/monitoring', [App\Http\Controllers\AdminController::class, 'monitoring'])
+        ->name('monitoring');
     Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])
         ->name('users');
     Route::post('/users/{user}/toggle-super', [App\Http\Controllers\AdminController::class, 'toggleSuper'])
         ->name('users.toggle-super');
+    Route::post('/users/{user}/toggle-coa', [App\Http\Controllers\AdminController::class, 'toggleCoa'])
+        ->name('users.toggle-coa');
+    Route::post('/users/{user}/reset-password', [App\Http\Controllers\AdminController::class, 'resetUserPassword'])
+        ->name('users.reset-password');
+    Route::post('/monitoring/issue-memo', [App\Http\Controllers\AdminController::class, 'issueMemo'])
+        ->name('issue-memo');
 });

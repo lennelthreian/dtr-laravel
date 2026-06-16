@@ -19,7 +19,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'first_name', 'middle_name', 'last_name', 'honorific_prefix', 'honorific_suffix',
         'emp_code', 'username',
-        'office', 'section', 'office_id', 'section_id', 'position', 'sex', 'email', 'password', 'is_super',
+        'office', 'section', 'office_id', 'section_id', 'position', 'sex', 'email', 'password', 'is_super', 'is_coa',
     ];
 
     /**
@@ -38,5 +38,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_super' => 'boolean',
+        'is_coa' => 'boolean',
     ];
 }

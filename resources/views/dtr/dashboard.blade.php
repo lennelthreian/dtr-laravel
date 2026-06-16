@@ -57,7 +57,7 @@
                     <img src="{{ asset('storage/' . $settings['logo_path']) }}" alt="Logo" style="height:32px;margin-bottom:4px;">
                 @endif
                 <h2>{{ $settings['system_name'] ?? 'e-DTR Records' }}</h2>
-                <p>{{ $currentUser->name }}</p>
+                <p>{{ $currentUser->name }} @if($currentUser->is_coa)<span style="display:inline-block;background:#e74c3c;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;vertical-align:middle;margin-left:4px;">COA</span>@endif</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="{{ route('dtr.dashboard') }}" class="active">
@@ -156,8 +156,20 @@
                         <div class="stat-lbl">Total Days</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-val" style="color:{{ $empDefaultWW === '4-day' ? 'var(--accent)' : 'var(--gray-700)' }};">{{ $empDefaultWW === '4-day' ? '4-Day' : '5-Day' }}</div>
+                        <div class="stat-val" style="color:var(--gray-700);">{{ $empDefaultWW === '4-day' ? '4-Day' : '5-Day' }}</div>
                         <div class="stat-lbl">Work Week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:#b91c1c;">{{ $lateDaysCount }}</div>
+                        <div class="stat-lbl">Days Late</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:#92400e;">{{ $undertimeDaysCount }}</div>
+                        <div class="stat-lbl">Days w/ Undertime</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:#991b1b;">{{ $absentDaysCount }}</div>
+                        <div class="stat-lbl">Days Absent</div>
                     </div>
                 </div>
 

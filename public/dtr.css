@@ -686,6 +686,9 @@ tbody tr:last-child td { border-bottom: none; }
   .dtr-table thead th { background: var(--gray-200) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .dtr-table tbody tr.has-data td { background: #fafff5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .dtr-table tbody tr.weekend td { background: var(--gray-100) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dtr-table tbody tr td.has-val { background: #d4edda !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dtr-table tbody tr td.no-entry { background: #fdd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dtr-table tbody tr td.edited-val { background: #fff3cd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .dtr-summary td { background: var(--gray-200) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2px 4px; font-weight: 600; border: 1px solid #000; line-height: 1.3; }
   .schedule-info { display: none; }
   .dtr-header-table { width: 100%; }

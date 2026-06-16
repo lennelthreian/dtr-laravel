@@ -9,7 +9,7 @@ class DtrEditRequest extends Model
     protected $fillable = [
         'employee_id', 'type', 'target_date', 'field', 'old_value', 'new_value',
         'reason', 'status', 'reviewer_id', 'reviewed_at', 'rejection_reason',
-        'ls_time_left', 'ls_time_returned', 'ls_no_return',
+        'ls_time_left', 'ls_time_returned', 'ls_no_return', 'deletion_of_request_id',
     ];
 
     protected $casts = [
@@ -25,6 +25,11 @@ class DtrEditRequest extends Model
     public function reviewer()
     {
         return $this->belongsTo(DtrUser::class, 'reviewer_id');
+    }
+
+    public function deletionOf()
+    {
+        return $this->belongsTo(self::class, 'deletion_of_request_id');
     }
 
     public function scopePending($query)
@@ -49,5 +54,15 @@ class DtrEditRequest extends Model
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
+    }
+
+    public function scopeDeletionRequests($query)
+    {
+        return $query->where('type', 'delete_request');
+    }
+
+    public function scopeNotDeletionRequests($query)
+    {
+        return $query->where('type', '!=', 'delete_request');
     }
 }

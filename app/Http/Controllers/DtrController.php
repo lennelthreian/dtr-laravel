@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DtrDayOverride;
 use App\Models\DtrEditRequest;
+use App\Models\DtrMonthlyShare;
 use App\Models\DtrUser;
 use App\Models\DtrSetting;
 use App\Models\GlobalHoliday;
@@ -24,7 +25,7 @@ class DtrController extends Controller
         $isSupervisor = $this->checkIsSupervisor($user);
         $sectionSupervisorIds = [];
         $officeSupervisorIds = [];
-        $canViewAll = $user->is_super;
+        $canViewAll = $user->is_super || $user->is_coa;
 
         if ($canViewAll) {
             $employees = DtrUser::where('is_active', true)
@@ -115,6 +116,36 @@ class DtrController extends Controller
                     ->first();
 
                 if ($employee) {
+                    if ($user->is_coa) {
+                        $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
+
+                        if (!$isShared) {
+                            $pendingRequests = DtrEditRequest::with('employee')
+                                ->forEmployee($empCode)
+                                ->forPeriod($year, $month)
+                                ->pending()
+                                ->get();
+
+                            if ($pendingRequests->isNotEmpty()) {
+                                $requestData = $pendingRequests->map(function ($r) {
+                                    return [
+                                        'id' => $r->id,
+                                        'type' => $r->type,
+                                        'target_date' => $r->target_date->format('M d, Y'),
+                                        'status' => $r->status,
+                                    ];
+                                });
+
+                                return redirect()->route('dtr.index')
+                                    ->with('coa_pending', [
+                                        'employee_name' => $employee->full_name,
+                                        'employee_code' => $employee->emp_code,
+                                        'requests' => $requestData->toArray(),
+                                    ]);
+                            }
+                        }
+                    }
+
                     $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
                     $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
@@ -582,7 +613,7 @@ class DtrController extends Controller
         $oicOfficeIds = $dtrUser
             ? \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
-        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds);
+        $canViewAll = $user->is_super || $user->is_coa || !empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds);
 
         $ahUserId = $settings['agency_head_user_id'] ?? null;
         if (!$canViewAll && $ahUserId && (int) $ahUserId === $user->id) {
@@ -616,6 +647,36 @@ class DtrController extends Controller
             $allowed = in_array($employee->id, $osIds) || ($ahOfficeId && $employee->office_id == $ahOfficeId);
             if (!$allowed) {
                 abort(403);
+            }
+        }
+
+        if ($user->is_coa) {
+            $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
+
+            if (!$isShared) {
+                $pendingRequests = DtrEditRequest::with('employee')
+                    ->forEmployee($empCode)
+                    ->forPeriod($year, $month)
+                    ->pending()
+                    ->get();
+
+                if ($pendingRequests->isNotEmpty()) {
+                    $requestData = $pendingRequests->map(function ($r) {
+                        return [
+                            'id' => $r->id,
+                            'type' => $r->type,
+                            'target_date' => $r->target_date->format('M d, Y'),
+                            'status' => $r->status,
+                        ];
+                    });
+
+                    return redirect()->route('dtr.index')
+                        ->with('coa_pending', [
+                            'employee_name' => $employee->full_name,
+                            'employee_code' => $employee->emp_code,
+                            'requests' => $requestData->toArray(),
+                        ]);
+                }
             }
         }
 
@@ -1087,12 +1148,13 @@ class DtrController extends Controller
 
         $pendingRequests = $allEmpRequests->where('status', 'pending')->sortByDesc('created_at');
         $approvedRequests = $allEmpRequests->where('status', 'approved')->sortBy('target_date');
+        $rejectedRequests = $allEmpRequests->where('status', 'rejected')->sortByDesc('created_at');
 
         return view('dtr.show', compact(
             'employee', 'settings', 'dtrData', 'month', 'year',
             'daysInMonth', 'monthName', 'presentDays',
             'totalMinutes', 'totalLate', 'totalUndertime',
-            'isOwnDtr', 'isSupervisor', 'pendingRequests', 'approvedRequests'
+            'isOwnDtr', 'isSupervisor', 'pendingRequests', 'approvedRequests', 'rejectedRequests'
         ));
     }
 
@@ -1408,6 +1470,9 @@ class DtrController extends Controller
             }
             unset($day);
 
+            $lateDaysCount = 0;
+            $undertimeDaysCount = 0;
+            $absentDaysCount = 0;
             foreach ($dtrData as $dayNum => $day) {
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
                 $dayMaxDow = $empDefaultWW === '4-day' ? 4 : 5;
@@ -1417,6 +1482,16 @@ class DtrController extends Controller
                         $parts = explode(':', $day['total_hours']);
                         $totalMinutes += (int) $parts[0] * 60 + (int) $parts[1];
                     }
+                }
+                $remarks = $day['remarks'] ?? '';
+                if (strpos($remarks, 'Late:') !== false) {
+                    $lateDaysCount++;
+                }
+                if (strpos($remarks, 'UT:') !== false) {
+                    $undertimeDaysCount++;
+                }
+                if (strpos($remarks, 'Absent') !== false) {
+                    $absentDaysCount++;
                 }
             }
         }
@@ -1469,8 +1544,165 @@ class DtrController extends Controller
         return view('dtr.dashboard', compact(
             'employee', 'settings', 'dtrData', 'month', 'year',
             'daysInMonth', 'monthName', 'presentDays', 'totalHoursFormatted',
-            'weeks', 'empDefaultWW', 'isSupervisor'
+            'weeks', 'empDefaultWW', 'isSupervisor', 'lateDaysCount', 'undertimeDaysCount', 'absentDaysCount'
         ));
+    }
+
+    public function getEmployeeMonthlyStats($empCode, $year, $month)
+    {
+        $settings = DtrSetting::getSettings();
+        $settings = $this->backupOriginalSchedule($settings);
+        $settings = $this->applyFourDaySettings($settings);
+
+        $employee = DtrUser::where('emp_code', $empCode)->first();
+        if (!$employee) {
+            return null;
+        }
+
+        $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
+
+        $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+        $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
+
+        $approvedEdits = DtrEditRequest::with('employee')
+            ->forEmployee($empCode)
+            ->forPeriod($year, $month)
+            ->approved()
+            ->get();
+
+        foreach ($approvedEdits as $edit) {
+            $dayNum = (int) $edit->target_date->format('j');
+            if (!isset($dtrData[$dayNum])) {
+                $dtrData[$dayNum] = [
+                    'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
+                    'total_hours' => '', 'remarks' => '', 'has_punch' => false, 'edited_fields' => [],
+                ];
+            }
+            $dtrData[$dayNum]['is_edited'] = true;
+
+            switch ($edit->type) {
+                case 'time_correction':
+                    $dtrData[$dayNum][$edit->field] = $edit->new_value;
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], [$edit->field]);
+                    break;
+                case 'absent':
+                    $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                    $dtrData[$dayNum]['total_hours'] = '';
+                    $dtrData[$dayNum]['remarks'] = 'Absent';
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out', 'pm_in', 'pm_out']);
+                    break;
+                case 'halfday_am':
+                    $dtrData[$dayNum]['am_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['am_out'] = 'ABSENT';
+                    if ($edit->field === 'am_out' && $edit->new_value) {
+                        $dtrData[$dayNum]['am_out'] = $edit->new_value;
+                    }
+                    $dtrData[$dayNum]['remarks'] = 'Halfday (AM)';
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
+                    break;
+                case 'halfday_pm':
+                    $dtrData[$dayNum]['pm_in'] = 'ABSENT';
+                    $dtrData[$dayNum]['pm_out'] = 'ABSENT';
+                    if ($edit->field === 'pm_in' && $edit->new_value) {
+                        $dtrData[$dayNum]['pm_in'] = $edit->new_value;
+                    }
+                    $dtrData[$dayNum]['remarks'] = 'Halfday (PM)';
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
+                    break;
+                case 'on_leave':
+                    $leaveField = $edit->field ?: 'whole_day';
+                    if ($leaveField === 'am') {
+                        $dtrData[$dayNum]['am_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['am_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['remarks'] = 'On Leave (AM)';
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['am_in', 'am_out']);
+                    } elseif ($leaveField === 'pm') {
+                        $dtrData[$dayNum]['pm_in'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['pm_out'] = 'ON LEAVE';
+                        $dtrData[$dayNum]['remarks'] = 'On Leave (PM)';
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], ['pm_in', 'pm_out']);
+                    } else {
+                        $dtrData[$dayNum]['remarks'] = 'On Leave';
+                        $dtrData[$dayNum]['edited_fields'] = array_merge($dtrData[$dayNum]['edited_fields'] ?? [], []);
+                    }
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    break;
+                case 'wfh':
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $wfhType = $edit->new_value ?: 'whole_day';
+                    if ($wfhType === 'am') {
+                        $dtrData[$dayNum]['remarks'] = 'WFH (AM)';
+                    } elseif ($wfhType === 'pm') {
+                        $dtrData[$dayNum]['remarks'] = 'WFH (PM)';
+                    } else {
+                        $dtrData[$dayNum]['remarks'] = 'WFH';
+                    }
+                    break;
+                case 'holiday':
+                    $dtrData[$dayNum]['remarks'] = 'Holiday';
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['is_holiday'] = true;
+                    break;
+                case 'work_suspension':
+                    $dtrData[$dayNum]['remarks'] = 'Work Suspension';
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['is_work_suspension'] = true;
+                    break;
+                case 'special_order':
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['so_number'] = $edit->new_value;
+                    $dtrData[$dayNum]['remarks'] = 'Special Order';
+                    break;
+                case 'travel_order':
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['to_number'] = $edit->new_value;
+                    $dtrData[$dayNum]['remarks'] = 'Travel Order';
+                    break;
+                case 'official_business':
+                    $dtrData[$dayNum]['has_punch'] = true;
+                    $dtrData[$dayNum]['ob_number'] = $edit->new_value;
+                    $dtrData[$dayNum]['remarks'] = 'Official Business';
+                    break;
+            }
+        }
+
+        foreach ($dtrData as $dayNum => &$day) {
+            $isSpecial = !empty($day['is_wfh']) || !empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || (isset($day['remarks']) && (strpos($day['remarks'], 'LS:') !== false || strpos($day['remarks'], 'WFH') === 0 || strpos($day['remarks'], 'On Leave') !== false));
+            if (!$isSpecial) {
+                $schedule = $this->getScheduleForWorkWeek($day['work_week_type'] ?? $empDefaultWW, $settings);
+                $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
+            }
+        }
+        unset($day);
+
+        $lateCount = 0;
+        $undertimeCount = 0;
+        $absentCount = 0;
+
+        foreach ($dtrData as $dayNum => $day) {
+            $remarks = $day['remarks'] ?? '';
+            $hasLate = strpos($remarks, 'Late:') !== false;
+            $hasUt = strpos($remarks, 'UT:') !== false;
+            if ($hasLate) $lateCount++;
+            if ($hasUt) $undertimeCount++;
+            if (strpos($remarks, 'Absent') !== false) $absentCount++;
+        }
+        $lateUndertimeCount = $lateCount + $undertimeCount;
+
+        return [
+            'employee' => $employee,
+            'late_days' => $lateCount,
+            'undertime_days' => $undertimeCount,
+            'late_undertime_days' => $lateUndertimeCount,
+            'absent_days' => $absentCount,
+        ];
     }
 
     public function printAll(Request $request)
@@ -1846,7 +2078,41 @@ class DtrController extends Controller
             ];
         }
 
-        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings'));
+        $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
+
+        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings', 'isShared'));
+    }
+
+    public function toggleShare(Request $request)
+    {
+        $data = $request->validate([
+            'month' => 'required|integer|between:1,12',
+            'year' => 'required|integer|between:2000,2100',
+        ]);
+
+        $month = (int) $data['month'];
+        $year = (int) $data['year'];
+
+        $existing = DtrMonthlyShare::where('month', $month)->where('year', $year)->first();
+
+        if ($existing) {
+            $existing->delete();
+            $message = "COA access removed for " . date('F Y', mktime(0, 0, 0, $month, 1, $year)) . ".";
+        } else {
+            DtrMonthlyShare::create([
+                'shared_by' => auth()->id(),
+                'month' => $month,
+                'year' => $year,
+            ]);
+            $message = "DTRs for " . date('F Y', mktime(0, 0, 0, $month, 1, $year)) . " shared with COA.";
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message, 'shared' => !$existing]);
+        }
+
+        return redirect()->route('dtr.print-all', ['month' => $month, 'year' => $year])
+            ->with('success', $message);
     }
 
     private function applyFourDaySettings($settings)

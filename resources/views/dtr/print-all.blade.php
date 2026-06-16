@@ -26,11 +26,15 @@
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom:20px;">
+    <div class="no-print" style="margin-bottom:20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button onclick="window.print()" class="btn btn-primary">Print All DTRs</button>
-        <button onclick="toggleTheme()" class="btn btn-outline" style="margin-left:8px;" id="themeToggle">Dark Mode</button>
-        <a href="{{ route('dtr.index') }}" class="btn btn-outline" style="margin-left:8px;">&larr; Back</a>
+        <button class="btn {{ $isShared ? 'btn-danger' : 'btn-accent' }}" onclick="toggleShare()" id="shareBtn">{{ $isShared ? 'Unshare from COA' : 'Share with COA' }}</button>
+        <button onclick="toggleTheme()" class="btn btn-outline" id="themeToggle">Dark Mode</button>
+        <a href="{{ route('dtr.index') }}" class="btn btn-outline" style="margin-left:auto;">&larr; Back</a>
     </div>
+    @if (session('success'))
+        <div class="alert alert-success no-print">{{ session('success') }}</div>
+    @endif
 
     <div class="print-header no-print">
         <h1>All Employees' DTR</h1>
@@ -97,6 +101,21 @@
             var btn = document.getElementById('themeToggle');
             if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
         })();
+
+        function toggleShare() {
+            if (!confirm('{{ $isShared ? 'Remove COA access for' : 'Share DTRs with COA for' }} {{ $monthName }} {{ $year }}?')) return;
+            fetch('{{ route("dtr.toggle-share") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ month: {{ $month }}, year: {{ $year }} })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) location.reload();
+            }).catch(function() { location.reload(); });
+        }
     </script>
 </body>
 </html>
