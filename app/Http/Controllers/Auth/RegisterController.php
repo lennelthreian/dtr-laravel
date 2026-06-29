@@ -28,7 +28,7 @@ class RegisterController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'emp_code' => ['required', 'string', 'max:20', 'unique:users'],
+            'bio_id' => ['required', 'string', 'max:20', 'unique:users'],
             'username' => ['required', 'string', 'max:50', 'unique:users'],
             'position' => ['required', 'string', 'max:255'],
             'sex' => ['required', 'in:Male,Female'],
@@ -46,7 +46,7 @@ class RegisterController extends Controller
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'],
             'last_name' => $data['last_name'],
-            'emp_code' => $data['emp_code'],
+            'bio_id' => $data['bio_id'],
             'username' => $data['username'],
             'position' => $data['position'],
             'sex' => $data['sex'],
@@ -59,7 +59,7 @@ class RegisterController extends Controller
         ]);
 
         DtrUser::updateOrCreate(
-            ['emp_code' => $data['emp_code']],
+            ['bio_id' => $data['bio_id']],
             [
                 'first_name' => $data['first_name'],
                 'middle_name' => $data['middle_name'],

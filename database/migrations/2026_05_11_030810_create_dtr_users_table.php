@@ -15,7 +15,7 @@ class CreateDtrUsersTable extends Migration
     {
         Schema::create('dtr_users', function (Blueprint $table) {
             $table->id();
-            $table->string('emp_code', 20)->unique();
+            $table->string('bio_id', 20)->unique();
             $table->string('first_name', 100)->default('');
             $table->string('last_name', 100)->default('');
             $table->string('middle_name', 100)->default('');

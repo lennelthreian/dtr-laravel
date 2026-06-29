@@ -12,7 +12,7 @@ class DtrUser extends Model
     use LogsUserActivity;
 
     protected $fillable = [
-        'emp_code', 'first_name', 'last_name', 'middle_name',
+        'bio_id', 'first_name', 'last_name', 'middle_name',
         'honorific_prefix', 'honorific_suffix',
         'position', 'sex', 'department', 'office', 'section', 'office_id', 'section_id',
         'employee_status', 'is_active', 'default_work_week',
@@ -41,6 +41,6 @@ class DtrUser extends Model
             $suffix = $this->honorific_suffix ? ', ' . $this->honorific_suffix : '';
             return $prefix . $name . $suffix;
         }
-        return 'Employee #' . $this->emp_code;
+        return 'Employee #' . $this->bio_id;
     }
 }

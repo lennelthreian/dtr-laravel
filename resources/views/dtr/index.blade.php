@@ -57,6 +57,9 @@
                     @if ($currentUser->is_super && $month && $year)
                         <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year]) }}" class="btn btn-accent btn-sm">Print All DTRs</a>
                     @endif
+                    @if ($currentUser->is_coa && $month && $year)
+                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year]) }}" class="btn btn-primary btn-sm">View All DTRs</a>
+                    @endif
                 @endif
                 @php $unread = $currentUser->unreadNotifications; @endphp
                 <div class="notif-pos">
@@ -75,7 +78,7 @@
                                     $d = $notif->data['target_date'] ?? null;
                                     $m = $d ? date('n', strtotime($d)) : date('n');
                                     $y = $d ? date('Y', strtotime($d)) : date('Y');
-                                    $ec = $notif->data['emp_code'] ?? '';
+                                    $ec = $notif->data['bio_id'] ?? '';
                                 @endphp
                                 <a href="{{ url('/dtr/show?emp=' . $ec . '&month=' . $m . '&year=' . $y) }}" class="notif-item" data-notif-id="{{ $notif->id }}">
                             @endif
@@ -105,43 +108,11 @@
                 <div class="alert alert-success no-print" style="max-width:1000px;">{{ session('success') }}</div>
             @endif
             @if (session('error'))
-                <div class="alert alert-danger no-print" style="max-width:1000px;">{{ session('error') }}</div>
+                <div class="alert alert-error no-print" style="max-width:1000px;">{{ session('error') }}</div>
             @endif
 
-            @php $coaPending = session('coa_pending'); @endphp
-            @if ($coaPending)
-                <div id="coaPendingModal" class="modal-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
-                    <div class="modal-box" style="background:#fff;border-radius:10px;padding:28px;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-                            <span style="font-size:28px;">&#9888;</span>
-                            <h3 style="margin:0;font-size:18px;color:#c0392b;">DTR Cannot Be Generated</h3>
-                        </div>
-                        <p style="margin-bottom:8px;color:#333;">
-                            Employee <strong>{{ $coaPending['employee_name'] }}</strong> ({{ $coaPending['employee_code'] }}) has pending edit requests that must be resolved first:
-                        </p>
-                        <ul style="margin:12px 0 20px 20px;color:#555;line-height:1.7;">
-                            @foreach ($coaPending['requests'] as $req)
-                                <li>
-                                    <strong>{{ ucfirst(str_replace('_', ' ', $req['type'])) }}</strong>
-                                    &mdash; {{ $req['target_date'] }}
-                                    (ID: {{ $req['id'] }})
-                                </li>
-                            @endforeach
-                        </ul>
-                        <p style="font-size:13px;color:#888;">All pending requests must be approved or rejected by a supervisor before the DTR can be generated.</p>
-                        <div style="text-align:right;margin-top:16px;">
-                            <button onclick="closeCoaModal()" class="btn btn-primary" style="padding:8px 24px;font-size:14px;">OK</button>
-                        </div>
-                    </div>
-                </div>
-                <script>
-                    function closeCoaModal() {
-                        document.getElementById('coaPendingModal').style.display = 'none';
-                    }
-                    document.getElementById('coaPendingModal').addEventListener('click', function(e) {
-                        if (e.target === this) closeCoaModal();
-                    });
-                </script>
+            @if (session('coa_not_shared'))
+                <div class="alert alert-error no-print" style="max-width:1000px;">{{ session('coa_not_shared') }}</div>
             @endif
 
             <div class="dtr-layout">
@@ -149,23 +120,23 @@
                     <div class="card">
                         <h2>{{ $currentUser->is_super || $isSupervisor ? 'Select Employee' : 'My Daily Time Record' }}</h2>
                         <form method="get" action="{{ route('dtr.index') }}" class="dtr-form">
-                            @if ($currentUser->is_super || $currentUser->is_coa || $isSupervisor)
+                            @if ($canViewAll || $isSupervisor)
                                 <div class="form-group">
                                     <label for="emp">Employee</label>
                                     <select name="emp" id="emp" required class="form-control">
                                         <option value="">-- Select Employee --</option>
                                         @foreach ($employees as $emp)
-                                            <option value="{{ $emp->emp_code }}" {{ $emp->emp_code == request('emp') ? 'selected' : '' }}>
-                                                {{ $emp->full_name }} ({{ $emp->emp_code }})
+                                            <option value="{{ $emp->bio_id }}" {{ $emp->bio_id == request('emp') ? 'selected' : '' }}>
+                                                {{ $emp->full_name }} ({{ $emp->bio_id }})
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                             @else
                                 @foreach ($employees as $emp)
-                                    <input type="hidden" name="emp" value="{{ $emp->emp_code }}">
+                                    <input type="hidden" name="emp" value="{{ $emp->bio_id }}">
                                     <p style="font-size:15px; margin-bottom:18px; color:var(--gray-800);">
-                                        <strong>{{ $emp->full_name }}</strong> ({{ $emp->emp_code }})
+                                        <strong>{{ $emp->full_name }}</strong> ({{ $emp->bio_id }})
                                     </p>
                                 @endforeach
                             @endif

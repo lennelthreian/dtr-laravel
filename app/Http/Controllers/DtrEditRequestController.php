@@ -49,7 +49,7 @@ class DtrEditRequestController extends Controller
         ]);
 
         $user = auth()->user();
-        $employee = DtrUser::where('emp_code', $user->emp_code)->firstOrFail();
+        $employee = DtrUser::where('bio_id', $user->bio_id)->firstOrFail();
 
         $targetDates = $this->resolveTargetDates($data);
 
@@ -246,7 +246,7 @@ class DtrEditRequestController extends Controller
         ]);
 
         $user = auth()->user();
-        $employee = DtrUser::where('emp_code', $user->emp_code)->firstOrFail();
+        $employee = DtrUser::where('bio_id', $user->bio_id)->firstOrFail();
 
         if (!$employee || $editRequest->employee_id !== $employee->id) {
             abort(403, 'You can only request deletion of your own edit requests.');
@@ -280,7 +280,7 @@ class DtrEditRequestController extends Controller
             abort(403, 'Approved requests cannot be directly deleted. Use the deletion request process.');
         }
 
-        $employee = DtrUser::where('emp_code', $user->emp_code)->first();
+        $employee = DtrUser::where('bio_id', $user->bio_id)->first();
 
         if (!$user->is_super) {
             if (!$employee || $editRequest->employee_id !== $employee->id) {
@@ -315,7 +315,7 @@ class DtrEditRequestController extends Controller
             if ($section->oic_id && $section->oic_id != $employee->id) {
                 $oicDtr = DtrUser::find($section->oic_id);
                 if ($oicDtr) {
-                    $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
+                    $oicUser = User::where('bio_id', $oicDtr->bio_id)->first();
                     if ($oicUser) {
                         $oicUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -323,7 +323,7 @@ class DtrEditRequestController extends Controller
             } elseif ($section->supervisor_id && $section->supervisor_id != $employee->id) {
                 $supervisorDtr = DtrUser::find($section->supervisor_id);
                 if ($supervisorDtr) {
-                    $supervisorUser = User::where('emp_code', $supervisorDtr->emp_code)->first();
+                    $supervisorUser = User::where('bio_id', $supervisorDtr->bio_id)->first();
                     if ($supervisorUser) {
                         $supervisorUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -336,7 +336,7 @@ class DtrEditRequestController extends Controller
             if ($office->oic_id && $office->oic_id != $employee->id) {
                 $oicDtr = DtrUser::find($office->oic_id);
                 if ($oicDtr) {
-                    $oicUser = User::where('emp_code', $oicDtr->emp_code)->first();
+                    $oicUser = User::where('bio_id', $oicDtr->bio_id)->first();
                     if ($oicUser) {
                         $oicUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -344,7 +344,7 @@ class DtrEditRequestController extends Controller
             } elseif ($office->supervisor_id && $office->supervisor_id != $employee->id) {
                 $officeSupervisorDtr = DtrUser::find($office->supervisor_id);
                 if ($officeSupervisorDtr) {
-                    $officeSupervisorUser = User::where('emp_code', $officeSupervisorDtr->emp_code)->first();
+                    $officeSupervisorUser = User::where('bio_id', $officeSupervisorDtr->bio_id)->first();
                     if ($officeSupervisorUser) {
                         $officeSupervisorUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -358,7 +358,7 @@ class DtrEditRequestController extends Controller
             if ($office->senior_manager_oic_id && $office->senior_manager_oic_id != $employee->id) {
                 $smOicDtr = DtrUser::find($office->senior_manager_oic_id);
                 if ($smOicDtr) {
-                    $smOicUser = User::where('emp_code', $smOicDtr->emp_code)->first();
+                    $smOicUser = User::where('bio_id', $smOicDtr->bio_id)->first();
                     if ($smOicUser) {
                         $smOicUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -366,7 +366,7 @@ class DtrEditRequestController extends Controller
             } elseif ($office->senior_manager_id && $office->senior_manager_id != $employee->id) {
                 $seniorManagerDtr = DtrUser::find($office->senior_manager_id);
                 if ($seniorManagerDtr) {
-                    $seniorManagerUser = User::where('emp_code', $seniorManagerDtr->emp_code)->first();
+                    $seniorManagerUser = User::where('bio_id', $seniorManagerDtr->bio_id)->first();
                     if ($seniorManagerUser) {
                         $seniorManagerUser->notify(new EditRequestSubmitted($editRequest));
                     }
@@ -387,7 +387,7 @@ class DtrEditRequestController extends Controller
 
     private function notifyEmployee(DtrEditRequest $editRequest, $status)
     {
-        $employeeUser = User::where('emp_code', $editRequest->employee->emp_code)->first();
+        $employeeUser = User::where('bio_id', $editRequest->employee->bio_id)->first();
         if (!$employeeUser) return;
 
         if ($status === 'approved') {
@@ -454,7 +454,7 @@ class DtrEditRequestController extends Controller
         $user = auth()->user();
         if ($user->is_super) return;
 
-        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        $dtrUser = DtrUser::where('bio_id', $user->bio_id)->first();
         if ($dtrUser && $editRequest->employee_id === $dtrUser->id) {
             abort(403, 'You cannot approve or reject your own edit request.');
         }
@@ -465,7 +465,7 @@ class DtrEditRequestController extends Controller
         $user = auth()->user();
         if ($user->is_super) return null;
 
-        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        $dtrUser = DtrUser::where('bio_id', $user->bio_id)->first();
         return $dtrUser ? $dtrUser->id : null;
     }
 }

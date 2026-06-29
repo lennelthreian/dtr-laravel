@@ -25,7 +25,7 @@ class DtrController extends Controller
         $isSupervisor = $this->checkIsSupervisor($user);
         $sectionSupervisorIds = [];
         $officeSupervisorIds = [];
-        $canViewAll = $user->is_super || $user->is_coa;
+        $canViewAll = $user->is_super;
 
         if ($canViewAll) {
             $employees = DtrUser::where('is_active', true)
@@ -33,60 +33,75 @@ class DtrController extends Controller
                 ->orderBy('last_name')
                 ->get();
         } else {
-            $ahUserId = $settings['agency_head_user_id'] ?? null;
-
-            if ($ahUserId && (int) $ahUserId === $user->id) {
-                $osIds = \App\Models\Office::whereNotNull('supervisor_id')->pluck('supervisor_id')->toArray();
-                $ahDtr = DtrUser::where('emp_code', $user->emp_code)->first();
-                $ahOfficeId = $ahDtr ? $ahDtr->office_id : null;
-                $employees = DtrUser::where('is_active', true)
-                    ->where(function ($q) use ($osIds, $ahOfficeId) {
-                        $q->whereIn('id', $osIds);
-                        if ($ahOfficeId) {
-                            $q->orWhere('office_id', $ahOfficeId);
-                        }
-                    })
-                    ->orderBy('first_name')
-                    ->orderBy('last_name')
-                    ->get();
-                $canViewAll = true;
-            } else {
-                $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
-
-                if ($dtrUser) {
-                    $sectionSupervisorIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
-                    $sectionOicIds = Section::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
-                    $officeSupervisorIds = \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
-                    $seniorManagerOicOfficeIds = \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id')->toArray();
-                    $oicOfficeIds = \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
+            if ($user->is_coa && $request->has('month') && $request->has('year')) {
+                $cm = (int) $request->month;
+                $cy = (int) $request->year;
+                $isShared = DtrMonthlyShare::where('month', $cm)->where('year', $cy)->exists();
+                if ($isShared) {
+                    $canViewAll = true;
+                    $employees = DtrUser::where('is_active', true)
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                        ->get();
                 }
+            }
 
-                $employeeQuery = DtrUser::where('is_active', true);
+            if (!$canViewAll) {
+                $ahUserId = $settings['agency_head_user_id'] ?? null;
 
-                if (!empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds)) {
-                    $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $sectionOicIds, $officeSupervisorIds, $seniorManagerOicOfficeIds, $oicOfficeIds) {
-                        if (!empty($sectionSupervisorIds)) {
-                            $q->whereIn('section_id', $sectionSupervisorIds);
-                        }
-                        if (!empty($sectionOicIds)) {
-                            $q->orWhereIn('section_id', $sectionOicIds);
-                        }
-                        if (!empty($officeSupervisorIds)) {
-                            $q->orWhereIn('office_id', $officeSupervisorIds);
-                        }
-                        if (!empty($seniorManagerOicOfficeIds)) {
-                            $q->orWhereIn('office_id', $seniorManagerOicOfficeIds);
-                        }
-                        if (!empty($oicOfficeIds)) {
-                            $q->orWhereIn('office_id', $oicOfficeIds);
-                        }
-                    });
+                if ($ahUserId && (int) $ahUserId === $user->id) {
+                    $osIds = \App\Models\Office::whereNotNull('supervisor_id')->pluck('supervisor_id')->toArray();
+                    $ahDtr = DtrUser::where('bio_id', $user->bio_id)->first();
+                    $ahOfficeId = $ahDtr ? $ahDtr->office_id : null;
+                    $employees = DtrUser::where('is_active', true)
+                        ->where(function ($q) use ($osIds, $ahOfficeId) {
+                            $q->whereIn('id', $osIds);
+                            if ($ahOfficeId) {
+                                $q->orWhere('office_id', $ahOfficeId);
+                            }
+                        })
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                        ->get();
                     $canViewAll = true;
                 } else {
-                    $employeeQuery->where('emp_code', $user->emp_code);
-                }
+                    $dtrUser = DtrUser::where('bio_id', $user->bio_id)->first();
 
-                $employees = $employeeQuery->orderBy('first_name')->orderBy('last_name')->get();
+                    if ($dtrUser) {
+                        $sectionSupervisorIds = Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
+                        $sectionOicIds = Section::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
+                        $officeSupervisorIds = \App\Models\Office::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray();
+                        $seniorManagerOicOfficeIds = \App\Models\Office::where('senior_manager_oic_id', $dtrUser->id)->pluck('id')->toArray();
+                        $oicOfficeIds = \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray();
+                    }
+
+                    $employeeQuery = DtrUser::where('is_active', true);
+
+                    if (!empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds)) {
+                        $employeeQuery->where(function ($q) use ($sectionSupervisorIds, $sectionOicIds, $officeSupervisorIds, $seniorManagerOicOfficeIds, $oicOfficeIds) {
+                            if (!empty($sectionSupervisorIds)) {
+                                $q->whereIn('section_id', $sectionSupervisorIds);
+                            }
+                            if (!empty($sectionOicIds)) {
+                                $q->orWhereIn('section_id', $sectionOicIds);
+                            }
+                            if (!empty($officeSupervisorIds)) {
+                                $q->orWhereIn('office_id', $officeSupervisorIds);
+                            }
+                            if (!empty($seniorManagerOicOfficeIds)) {
+                                $q->orWhereIn('office_id', $seniorManagerOicOfficeIds);
+                            }
+                            if (!empty($oicOfficeIds)) {
+                                $q->orWhereIn('office_id', $oicOfficeIds);
+                            }
+                        });
+                        $canViewAll = true;
+                    } else {
+                        $employeeQuery->where('bio_id', $user->bio_id);
+                    }
+
+                    $employees = $employeeQuery->orderBy('first_name')->orderBy('last_name')->get();
+                }
             }
         }
 
@@ -103,60 +118,57 @@ class DtrController extends Controller
         $approvedRequests = collect();
 
         if ($request->has('month') && $request->has('year')) {
-            $empCode = $request->emp;
-            if (!$empCode && !$canViewAll) {
-                $empCode = $user->emp_code;
-            }
-            if ($empCode) {
-                $month = (int) $request->month;
-                $year = (int) $request->year;
+            $month = (int) $request->month;
+            $year = (int) $request->year;
 
-                $employee = DtrUser::where('emp_code', $empCode)
+            if ($user->is_coa) {
+                $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
+
+                if (!$isShared) {
+                    return redirect()->route('dtr.index')
+                        ->with('coa_not_shared', 'DTRs for ' . date('F Y', mktime(0, 0, 0, $month, 1, $year)) . ' have not been shared with COA yet.');
+                }
+            }
+
+            $bioId = $request->emp;
+            if (!$bioId && !$canViewAll) {
+                $bioId = $user->bio_id;
+            }
+            if ($bioId) {
+                $employee = DtrUser::where('bio_id', $bioId)
                     ->where('is_active', true)
                     ->first();
 
                 if ($employee) {
-                    if ($user->is_coa) {
-                        $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
-
-                        if (!$isShared) {
-                            $pendingRequests = DtrEditRequest::with('employee')
-                                ->forEmployee($empCode)
-                                ->forPeriod($year, $month)
-                                ->pending()
-                                ->get();
-
-                            if ($pendingRequests->isNotEmpty()) {
-                                $requestData = $pendingRequests->map(function ($r) {
-                                    return [
-                                        'id' => $r->id,
-                                        'type' => $r->type,
-                                        'target_date' => $r->target_date->format('M d, Y'),
-                                        'status' => $r->status,
-                                    ];
-                                });
-
-                                return redirect()->route('dtr.index')
-                                    ->with('coa_pending', [
-                                        'employee_name' => $employee->full_name,
-                                        'employee_code' => $employee->emp_code,
-                                        'requests' => $requestData->toArray(),
-                                    ]);
+                    $targetUser = \App\Models\User::where('bio_id', $bioId)->first();
+                    $targetIsAgencyHead = $targetUser && ($settings['agency_head_user_id'] ?? null) && (int) $settings['agency_head_user_id'] === $targetUser->id;
+                    if (!$targetIsAgencyHead && $targetUser) {
+                        $ahName = $settings['agency_head_name'] ?? '';
+                        if ($ahName) {
+                            $nameWords = array_filter(explode(' ', preg_replace('/[^a-zA-Z0-9 ]/', '', $ahName)), function ($w) { return strlen(trim($w)) > 2; });
+                            $match = true;
+                            foreach ($nameWords as $word) {
+                                if (stripos($targetUser->name, trim($word)) === false) { $match = false; break; }
                             }
+                            $targetIsAgencyHead = $match;
                         }
+                    }
+                    if ($targetUser && ($targetUser->is_super || $targetUser->is_coa || $targetIsAgencyHead)) {
+                        return redirect()->route('dtr.index', ['month' => $month, 'year' => $year])
+                            ->with('error', 'DTR for this employee is restricted and cannot be viewed.');
                     }
 
                     $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
                     $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
-                    $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+                    $dtrData = $this->computeDtr($bioId, $year, $month, $settings, $employee->default_work_week ?? null);
 
                     $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
 
                     $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
 
                     $approvedEdits = DtrEditRequest::with('employee')
-                        ->forEmployee($empCode)
+                        ->forEmployee($bioId)
                         ->forPeriod($year, $month)
                         ->approved()
                         ->get();
@@ -580,13 +592,13 @@ class DtrController extends Controller
             }
         }
 
-        $isOwnDtr = $employee && isset($empCode) && $empCode === $user->emp_code;
+        $isOwnDtr = $employee && isset($bioId) && $bioId === $user->bio_id;
 
         return view('dtr.index', compact(
             'employees', 'dtrData', 'month', 'year', 'monthName',
             'daysInMonth', 'presentDays', 'totalMinutes', 'totalLate',
             'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor',
-            'approvedRequests'
+            'approvedRequests', 'canViewAll'
         ));
     }
 
@@ -597,7 +609,7 @@ class DtrController extends Controller
         $settings = $this->backupOriginalSchedule($settings);
         $settings = $this->applyFourDaySettings($settings);
 
-        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        $dtrUser = DtrUser::where('bio_id', $user->bio_id)->first();
         $sectionSupervisorIds = $dtrUser
             ? Section::where('supervisor_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
@@ -613,7 +625,7 @@ class DtrController extends Controller
         $oicOfficeIds = $dtrUser
             ? \App\Models\Office::where('oic_id', $dtrUser->id)->pluck('id')->toArray()
             : [];
-        $canViewAll = $user->is_super || $user->is_coa || !empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds);
+        $canViewAll = $user->is_super || !empty($sectionSupervisorIds) || !empty($sectionOicIds) || !empty($officeSupervisorIds) || !empty($seniorManagerOicOfficeIds) || !empty($oicOfficeIds);
 
         $ahUserId = $settings['agency_head_user_id'] ?? null;
         if (!$canViewAll && $ahUserId && (int) $ahUserId === $user->id) {
@@ -624,9 +636,9 @@ class DtrController extends Controller
             $request->validate([
                 'emp' => 'required|string',
             ]);
-            $empCode = $request->emp;
+            $bioId = $request->emp;
         } else {
-            $empCode = $user->emp_code;
+            $bioId = $user->bio_id;
         }
 
         $request->validate([
@@ -636,13 +648,13 @@ class DtrController extends Controller
         $month = (int) $request->month;
         $year = (int) $request->year;
 
-        $employee = DtrUser::where('emp_code', $empCode)
+        $employee = DtrUser::where('bio_id', $bioId)
             ->where('is_active', true)
             ->firstOrFail();
 
         if (!$user->is_super && $ahUserId && (int) $ahUserId === $user->id) {
             $osIds = \App\Models\Office::whereNotNull('supervisor_id')->pluck('supervisor_id')->toArray();
-            $ahDtr = DtrUser::where('emp_code', $user->emp_code)->first();
+            $ahDtr = DtrUser::where('bio_id', $user->bio_id)->first();
             $ahOfficeId = $ahDtr ? $ahDtr->office_id : null;
             $allowed = in_array($employee->id, $osIds) || ($ahOfficeId && $employee->office_id == $ahOfficeId);
             if (!$allowed) {
@@ -654,43 +666,22 @@ class DtrController extends Controller
             $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
 
             if (!$isShared) {
-                $pendingRequests = DtrEditRequest::with('employee')
-                    ->forEmployee($empCode)
-                    ->forPeriod($year, $month)
-                    ->pending()
-                    ->get();
-
-                if ($pendingRequests->isNotEmpty()) {
-                    $requestData = $pendingRequests->map(function ($r) {
-                        return [
-                            'id' => $r->id,
-                            'type' => $r->type,
-                            'target_date' => $r->target_date->format('M d, Y'),
-                            'status' => $r->status,
-                        ];
-                    });
-
-                    return redirect()->route('dtr.index')
-                        ->with('coa_pending', [
-                            'employee_name' => $employee->full_name,
-                            'employee_code' => $employee->emp_code,
-                            'requests' => $requestData->toArray(),
-                        ]);
-                }
+                return redirect()->route('dtr.index')
+                    ->with('coa_not_shared', 'DTRs for ' . date('F Y', mktime(0, 0, 0, $month, 1, $year)) . ' have not been shared with COA yet.');
             }
         }
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
-        $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+        $dtrData = $this->computeDtr($bioId, $year, $month, $settings, $employee->default_work_week ?? null);
 
         $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
 
         $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
 
         $approvedEdits = DtrEditRequest::with('employee')
-            ->forEmployee($empCode)
+            ->forEmployee($bioId)
             ->forPeriod($year, $month)
             ->approved()
             ->get();
@@ -1116,7 +1107,7 @@ class DtrController extends Controller
             }
         }
 
-        $isOwnDtr = $empCode === $user->emp_code;
+        $isOwnDtr = $bioId === $user->bio_id;
         $isSupervisor = $user->is_super;
         if (!$isSupervisor && $dtrUser) {
             $isSupervisor = Section::where('supervisor_id', $dtrUser->id)
@@ -1142,7 +1133,7 @@ class DtrController extends Controller
         }
 
         $allEmpRequests = DtrEditRequest::with('employee')
-            ->forEmployee($empCode)
+            ->forEmployee($bioId)
             ->forPeriod($year, $month)
             ->get();
 
@@ -1168,7 +1159,7 @@ class DtrController extends Controller
         $month = (int) $request->input('month', date('m'));
         $year = (int) $request->input('year', date('Y'));
 
-        $employee = DtrUser::where('emp_code', $user->emp_code)->first();
+        $employee = DtrUser::where('bio_id', $user->bio_id)->first();
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $monthName = date('F', mktime(0, 0, 0, $month, 1));
@@ -1178,14 +1169,14 @@ class DtrController extends Controller
         $totalMinutes = 0;
 
         if ($employee) {
-            $empCode = $employee->emp_code;
+            $bioId = $employee->bio_id;
             $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
 
-            $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+            $dtrData = $this->computeDtr($bioId, $year, $month, $settings, $employee->default_work_week ?? null);
             $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
 
             $approvedEdits = DtrEditRequest::with('employee')
-                ->forEmployee($empCode)
+                ->forEmployee($bioId)
                 ->forPeriod($year, $month)
                 ->approved()
                 ->get();
@@ -1531,7 +1522,7 @@ class DtrController extends Controller
 
         $totalHoursFormatted = sprintf('%02d:%02d', floor($totalMinutes / 60), $totalMinutes % 60);
 
-        $dtrUser = DtrUser::where('emp_code', $user->emp_code)->first();
+        $dtrUser = DtrUser::where('bio_id', $user->bio_id)->first();
         $isSupervisor = $user->is_super;
         if (!$isSupervisor && $dtrUser) {
             $isSupervisor = \App\Models\Section::where('supervisor_id', $dtrUser->id)->exists()
@@ -1548,24 +1539,24 @@ class DtrController extends Controller
         ));
     }
 
-    public function getEmployeeMonthlyStats($empCode, $year, $month)
+    public function getEmployeeMonthlyStats($bioId, $year, $month)
     {
         $settings = DtrSetting::getSettings();
         $settings = $this->backupOriginalSchedule($settings);
         $settings = $this->applyFourDaySettings($settings);
 
-        $employee = DtrUser::where('emp_code', $empCode)->first();
+        $employee = DtrUser::where('bio_id', $bioId)->first();
         if (!$employee) {
             return null;
         }
 
         $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
 
-        $dtrData = $this->computeDtr($empCode, $year, $month, $settings, $employee->default_work_week ?? null);
+        $dtrData = $this->computeDtr($bioId, $year, $month, $settings, $employee->default_work_week ?? null);
         $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
 
         $approvedEdits = DtrEditRequest::with('employee')
-            ->forEmployee($empCode)
+            ->forEmployee($bioId)
             ->forPeriod($year, $month)
             ->approved()
             ->get();
@@ -1709,7 +1700,19 @@ class DtrController extends Controller
     {
         $user = auth()->user();
         if (!$user->is_super) {
-            abort(403);
+            if (!$user->is_coa) {
+                abort(403);
+            }
+            $request->validate([
+                'month' => 'required|integer|between:1,12',
+                'year' => 'required|integer|between:2000,2100',
+            ]);
+            $cm = (int) $request->month;
+            $cy = (int) $request->year;
+            $isShared = DtrMonthlyShare::where('month', $cm)->where('year', $cy)->exists();
+            if (!$isShared) {
+                abort(403, 'DTRs for this month have not been shared with COA yet.');
+            }
         }
 
         $request->validate([
@@ -1719,15 +1722,45 @@ class DtrController extends Controller
         $month = (int) $request->month;
         $year = (int) $request->year;
 
+        $settings = DtrSetting::getSettings();
+        $settings = $this->backupOriginalSchedule($settings);
+        $settings = $this->applyFourDaySettings($settings);
+
+        $protectedBioIds = \App\Models\User::where(function ($q) {
+                $q->where('is_super', true)->orWhere('is_coa', true);
+            })
+            ->whereNotNull('bio_id')
+            ->pluck('bio_id')
+            ->toArray();
+
+        $ahUserId = $settings['agency_head_user_id'] ?? null;
+        if ($ahUserId) {
+            $ahUser = \App\Models\User::find($ahUserId);
+            if ($ahUser && $ahUser->bio_id) {
+                $protectedBioIds[] = $ahUser->bio_id;
+            }
+        }
+        $ahName = $settings['agency_head_name'] ?? '';
+        if ($ahName) {
+            $nameWords = array_filter(explode(' ', preg_replace('/[^a-zA-Z0-9 ]/', '', $ahName)), function ($w) { return strlen(trim($w)) > 2; });
+            $query = \App\Models\User::whereNotNull('bio_id');
+            foreach ($nameWords as $word) {
+                $query->where('name', 'like', '%' . trim($word) . '%');
+            }
+            $ahUser = $query->first();
+            if ($ahUser && $ahUser->bio_id) {
+                $protectedBioIds[] = $ahUser->bio_id;
+            }
+        }
+
+        $protectedBioIds = array_values(array_unique(array_filter($protectedBioIds)));
+
         $employees = DtrUser::where('is_active', true)
+            ->whereNotIn('bio_id', $protectedBioIds)
             ->orderBy('office')
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
-
-        $settings = DtrSetting::getSettings();
-        $settings = $this->backupOriginalSchedule($settings);
-        $settings = $this->applyFourDaySettings($settings);
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $monthName = date('F', mktime(0, 0, 0, $month, 1));
 
@@ -1739,7 +1772,7 @@ class DtrController extends Controller
             ->approved()
             ->get()
             ->groupBy(function ($edit) {
-                return $edit->employee->emp_code;
+                return $edit->employee->bio_id;
             });
 
         $allDayOverrides = DtrDayOverride::whereIn('employee_id', $employees->pluck('id'))
@@ -1749,13 +1782,13 @@ class DtrController extends Controller
 
         $allDtrs = [];
         foreach ($employees as $employee) {
-            $dtrData = $this->computeDtr($employee->emp_code, $year, $month, $settings, $employee->default_work_week ?? null);
+            $dtrData = $this->computeDtr($employee->bio_id, $year, $month, $settings, $employee->default_work_week ?? null);
 
             $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
 
             $dtrData = $this->applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW);
 
-            $approvedEdits = $allApprovedEdits->get($employee->emp_code, collect());
+            $approvedEdits = $allApprovedEdits->get($employee->bio_id, collect());
 
             foreach ($approvedEdits as $edit) {
                 $dayNum = (int) $edit->target_date->format('j');
@@ -2080,11 +2113,23 @@ class DtrController extends Controller
 
         $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
 
-        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings', 'isShared'));
+        $pendingCount = DtrEditRequest::whereBetween('target_date', ["$year-$month-01", "$year-$month-$daysInMonth"])
+            ->where('status', 'pending')
+            ->count();
+
+        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings', 'isShared', 'pendingCount'));
     }
 
     public function toggleShare(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->is_super) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Only super admins can manage COA access.'], 403);
+            }
+            abort(403, 'Only super admins can manage COA access.');
+        }
+
         $data = $request->validate([
             'month' => 'required|integer|between:1,12',
             'year' => 'required|integer|between:2000,2100',
@@ -2099,6 +2144,23 @@ class DtrController extends Controller
             $existing->delete();
             $message = "COA access removed for " . date('F Y', mktime(0, 0, 0, $month, 1, $year)) . ".";
         } else {
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+            $start = sprintf('%04d-%02d-01', $year, $month);
+            $end = sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth);
+
+            $pendingCount = DtrEditRequest::whereBetween('target_date', [$start, $end])
+                ->where('status', 'pending')
+                ->count();
+
+            if ($pendingCount > 0) {
+                $message = "Cannot share with COA. There are {$pendingCount} pending edit request(s) for {$start} to {$end} that must be resolved first.";
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->route('dtr.print-all', ['month' => $month, 'year' => $year])
+                    ->with('error', $message);
+            }
+
             DtrMonthlyShare::create([
                 'shared_by' => auth()->id(),
                 'month' => $month,
@@ -2179,7 +2241,7 @@ class DtrController extends Controller
     private function checkIsSupervisor($user)
     {
         if ($user->is_super) return true;
-        $dtrU = DtrUser::where('emp_code', $user->emp_code)->first();
+        $dtrU = DtrUser::where('bio_id', $user->bio_id)->first();
         if (!$dtrU) return false;
         return Section::where('supervisor_id', $dtrU->id)->exists()
             || \App\Models\Office::where('supervisor_id', $dtrU->id)->exists();
@@ -2308,13 +2370,13 @@ class DtrController extends Controller
         return implode(' | ', $remarks);
     }
 
-    private function computeDtr($empCode, $year, $month, $settings, $defaultWorkWeek = null)
+    private function computeDtr($bioId, $year, $month, $settings, $defaultWorkWeek = null)
     {
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $firstDay = "$year-$month-01";
         $lastDay = "$year-$month-$daysInMonth";
 
-        $punches = IclockTransaction::forEmployee($empCode)
+        $punches = IclockTransaction::forEmployee($bioId)
             ->forPeriod($firstDay, $lastDay)
             ->ordered()
             ->get();
@@ -2443,7 +2505,7 @@ class DtrController extends Controller
     public function toggleDayWorkWeek(Request $request)
     {
         $user = auth()->user();
-        $employee = DtrUser::where('emp_code', $user->emp_code)->firstOrFail();
+        $employee = DtrUser::where('bio_id', $user->bio_id)->firstOrFail();
 
         $data = $request->validate([
             'target_date' => 'required|date',

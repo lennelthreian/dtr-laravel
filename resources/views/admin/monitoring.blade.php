@@ -40,8 +40,9 @@
                 <a href="{{ route('admin.sections') }}"><span>Manage Sections</span></a>
                 <a href="{{ route('admin.employees') }}"><span>Assign Employees</span></a>
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
-                <a href="{{ route('admin.monitoring') }}" class="active"><span>Employee Monitoring</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
+                <a href="{{ route('admin.monitoring') }}" class="active"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -87,7 +88,14 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="search" style="font-size:12px;">Search Employee</label>
+                        <input type="text" name="search" id="search" placeholder="Name or emp code..." value="{{ request('search') }}" class="form-control" style="padding:6px 10px;font-size:13px;width:180px;">
+                    </div>
                     <button type="submit" class="btn btn-primary btn-sm" style="margin-top:18px;">View</button>
+                    @if (request('search'))
+                        <a href="{{ route('admin.monitoring', ['month' => $month, 'year' => $year]) }}" class="btn btn-outline btn-sm" style="margin-top:18px;">Clear</a>
+                    @endif
                 </form>
             </div>
 
@@ -203,3 +211,4 @@
     </script>
 </body>
 </html>
+

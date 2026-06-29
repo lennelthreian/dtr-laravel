@@ -3,14 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-class AddEmpCodePunchTimeIndexToIclockTransaction extends Migration
+class AddBioIdPunchTimeIndexToIclockTransaction extends Migration
 {
     public function up()
     {
         try {
             DB::connection('zkbiotime')->statement('
                 ALTER TABLE iclock_transaction 
-                ADD INDEX idx_emp_code_punch_time (emp_code, punch_time)
+                ADD INDEX idx_bio_id_punch_time (bio_id, punch_time)
             ');
         } catch (\Exception $e) {
             // Index may already exist; skip
@@ -22,7 +22,7 @@ class AddEmpCodePunchTimeIndexToIclockTransaction extends Migration
         try {
             DB::connection('zkbiotime')->statement('
                 ALTER TABLE iclock_transaction 
-                DROP INDEX idx_emp_code_punch_time
+                DROP INDEX idx_bio_id_punch_time
             ');
         } catch (\Exception $e) {
             // Index may not exist; skip

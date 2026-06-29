@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
@@ -51,6 +52,10 @@
 
             <div class="card" style="margin-bottom:16px;">
                 <form method="GET" action="{{ route('admin.logs') }}" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:12px;">Search</label>
+                        <input type="text" name="search" placeholder="Search description..." value="{{ request('search') }}" class="form-control" style="padding:6px 10px;font-size:13px;width:180px;">
+                    </div>
                     <div class="form-group" style="margin:0;">
                         <label style="font-size:12px;">Action</label>
                         <select name="action" class="form-control" style="padding:6px 10px;font-size:13px;">
@@ -150,3 +155,5 @@
     </script>
 </body>
 </html>
+
+

@@ -40,6 +40,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}" class="active"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
                 <a href="{{ route('admin.settings') }}"><span>Settings</span></a>
@@ -112,7 +113,18 @@
                     </div>
 
                     <div class="card" style="margin-top:16px;">
-                        <h2>Entries This Month</h2>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                            <h2 style="margin:0;">Entries This Month</h2>
+                            <form method="GET" action="{{ route('admin.holidays') }}" style="display:flex;gap:8px;">
+                                <input type="hidden" name="month" value="{{ $month }}">
+                                <input type="hidden" name="year" value="{{ $year }}">
+                                <input type="text" name="search" placeholder="Search entries..." value="{{ $search ?? '' }}" style="padding:6px 10px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:12px;background:var(--white);color:var(--gray-900);width:160px;outline:none;">
+                                <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                                @if ($search)
+                                    <a href="{{ route('admin.holidays', ['month' => $month, 'year' => $year]) }}" class="btn btn-outline btn-sm">Clear</a>
+                                @endif
+                            </form>
+                        </div>
                         @php $entries = collect($weeks)->flatten(1)->filter(fn($d) => $d && $d['holiday']) @endphp
                         @if ($entries->isEmpty())
                             <p style="color:var(--gray-500);font-size:13px;">No holidays or work suspensions this month.</p>
@@ -217,3 +229,5 @@
     </script>
 </body>
 </html>
+
+

@@ -225,7 +225,100 @@ ul { padding-left: 16px; }
   </div>
 </div>
 
-<!-- SECTION 2: VIEW & MANAGE DTR -->
+<!-- SECTION 2: BIOMETRICS TIME LOGGING -->
+<div class="section">
+  <div class="section-title">Biometrics Time Logging &mdash; Allowable Times</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>How Your Time is Recorded</h3>
+      <p>Your daily attendance is captured through the <strong>ZKTeco Biometrics Device</strong>. Each time you authenticate using the facial recognition feature, the system records a punch timestamp. These punches are automatically classified as <strong>Time In</strong>, <strong>Break Out</strong>, <strong>Break In</strong>, or <strong>Time Out</strong> based on their time of day relative to the official work schedule.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Official Schedule &amp; Allowable Time Windows</h3>
+      <p>The table below shows the standard schedule for each work-week type and the allowed flexi-time windows. Flexi-time is a grace period during which you can punch without being marked Late or Undertime.</p>
+
+      <div style="margin-top:12px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="padding:8px 10px;text-align:left;border:1px solid #e2e8f0;">Punch Type</th>
+              <th style="padding:8px 10px;text-align:center;border:1px solid #e2e8f0;">5-Day Work Week</th>
+              <th style="padding:8px 10px;text-align:center;border:1px solid #e2e8f0;">4-Day Work Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;">Time In (AM Arrival)</td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">
+                <strong>07:00 AM or earlier</strong><br>
+                <span style="font-size:11px;color:#16a34a;">Flexi: up to 09:00 AM</span><br>
+                <span style="font-size:10px;color:#64748b;">(120 min grace period)</span>
+              </td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">
+                <strong>07:00 AM or earlier</strong><br>
+                <span style="font-size:11px;color:#16a34a;">Flexi: up to 08:00 AM</span><br>
+                <span style="font-size:10px;color:#64748b;">(60 min grace period)</span>
+              </td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;">Break Out (AM Departure)</td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;"><strong>12:01 PM &ndash; 12:30 PM</strong></td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;"><strong>12:01 PM &ndash; 12:30 PM</strong></td>
+            </tr>
+            <tr>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;">Break In (PM Arrival)</td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;"><strong>12:31 PM &ndash; 1:00 PM</strong></td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;"><strong>12:31 PM &ndash; 1:00 PM</strong></td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;">Time Out (PM Departure)</td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">
+                <strong>05:00 PM</strong><br>
+                <span style="font-size:11px;color:#16a34a;">Flexi: as early as 04:00 PM</span><br>
+                <span style="font-size:10px;color:#64748b;">(60 min grace period)</span>
+              </td>
+              <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">
+                <strong>07:00 PM</strong><br>
+                <span style="font-size:11px;color:#16a34a;">Flexi: as early as 06:00 PM</span><br>
+                <span style="font-size:10px;color:#64748b;">(60 min grace period)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Lunch Break Deduction</h3>
+      <p>A <strong>60-minute lunch break</strong> is automatically deducted from your total hours worked. This deduction is applied between your AM Arrival (Time In) and PM Departure (Time Out). There is no need to punch separately for lunch &mdash; your Break Out and Break In punches record the gap.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Important Reminders</h3>
+      <ul style="list-style-type:disc;padding-left:18px;font-size:12.5px;color:#475569;line-height:1.8;">
+        <li>Punching <strong>after the flexi grace period</strong> will mark you as <strong style="color:#dc2626;">Late</strong>.</li>
+        <li>Punching out <strong>before the flexi grace period</strong> will mark you as <strong style="color:#92400e;">Undertime</strong>.</li>
+        <li>Always record all four (4) required entries: <strong>Time In, Break Out, Break In, and Time Out</strong>.</li>
+        <li>Missed punches will cause missing or incomplete entries in your DTR. You may request a <strong>Time Correction</strong> edit to fix them.</li>
+        <li>Biometrics data syncs automatically between the device and the e-DTR system.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: VIEW & MANAGE DTR -->
 <div class="section">
   <div class="section-title">How to View &amp; Manage Your Daily Time Record</div>
 
@@ -279,7 +372,7 @@ ul { padding-left: 16px; }
   </div>
 </div>
 
-<!-- SECTION 3: WORK WEEK TOGGLE -->
+<!-- SECTION 4: WORK WEEK TOGGLE -->
 <div class="section">
   <div class="section-title">How to Toggle Between 4-Day &amp; 5-Day Work Week</div>
 
@@ -316,7 +409,7 @@ ul { padding-left: 16px; }
   </div>
 </div>
 
-<!-- SECTION 4: SUBMIT DTR EDIT REQUESTS -->
+<!-- SECTION 5: SUBMIT DTR EDIT REQUESTS -->
 <div class="section">
   <div class="section-title">How to Submit DTR Edit Requests</div>
 
@@ -371,7 +464,7 @@ ul { padding-left: 16px; }
   </div>
 </div>
 
-<!-- SECTION 5: DASHBOARD -->
+<!-- SECTION 6: DASHBOARD -->
 <div class="section">
   <div class="section-title">How to Use the Dashboard</div>
 
@@ -426,7 +519,7 @@ ul { padding-left: 16px; }
   </div>
 </div>
 
-<!-- SECTION 6: EDIT PROFILE -->
+<!-- SECTION 7: EDIT PROFILE -->
 <div class="section">
   <div class="section-title">How to Edit Your Profile &amp; Change Password</div>
 
@@ -467,9 +560,10 @@ ul { padding-left: 16px; }
 <!-- FOOTER -->
 <div class="footer">
   <div class="note">
-    <strong style="color:#b45309;">DRY-RUN STAGE:</strong> This system is currently undergoing dry-run testing. Full deployment will follow once all features are finalized and supervisor feedback has been incorporated.<br><br>
+    <strong style="color:#b45309;">DRY-RUN STAGE:</strong> This system is currently undergoing dry-run testing. Full deployment will follow once all features are finalized, supervisor feedback has been incorporated. An office memorandum has been issued for the full implementation of the system.<br><br>
     <strong>Need help?</strong> Contact your IT Staff or Supervisor.<br>
     Biometrics ID, Username, and Email must be unique. Password requires 8+ characters.<br>
+    <strong style="color:#b45309;">Important:</strong> Use the <strong>facial recognition</strong> feature of the biometrics device for attendance logging, not the fingerprint scanning.<br>
     <strong style="color:#b45309;">Important:</strong> Supervisor roles (Section Head, Office/Division Head, Senior Manager, and Agency Head) are assigned only by the <strong>Super Admin / HR Account</strong> — not during registration.
   </div>
   <div class="badge">MBLISTTDA e-DTR System</div>

@@ -12,6 +12,7 @@
         "doctrine/dbal": "^3.10",
         "fideloper/proxy": "^4.2",
         "fruitcake/laravel-cors": "^2.0",
+        "google/apiclient": "*",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.0",
         "laravel/tinker": "^2.0"
