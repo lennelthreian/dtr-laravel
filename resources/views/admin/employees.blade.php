@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -52,7 +53,13 @@
             <div class="card">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                     <h2 style="margin:0;">Employees ({{ $employees->count() }})</h2>
-                    <input type="text" id="empSearch" placeholder="Search by name or emp code..." style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:280px;outline:none;" oninput="filterEmployees(this.value)">
+                    <form method="GET" action="{{ route('admin.employees') }}" style="display:flex;gap:8px;">
+                        <input type="text" name="search" placeholder="Search by name, code, office..." value="{{ request('search') }}" style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:220px;outline:none;">
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        @if (request('search'))
+                            <a href="{{ route('admin.employees') }}" class="btn btn-outline btn-sm">Clear</a>
+                        @endif
+                    </form>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -66,11 +73,11 @@
                                 <th class="text-center">Password</th>
                             </tr>
                         </thead>
-                        <tbody id="empTableBody">
+                        <tbody>
                             @forelse ($employees as $employee)
                                 <tr>
                                     <td><strong>{{ $employee->full_name }}</strong></td>
-                                    <td>{{ $employee->emp_code }}</td>
+                                    <td>{{ $employee->bio_id }}</td>
                                     <td>{{ $employee->office ?: '&mdash;' }}</td>
                                     <td>{{ $employee->section ?: '&mdash;' }}</td>
                                     <td class="text-center">
@@ -178,20 +185,8 @@
             if (e.target === this) closeAssign();
         });
 
-        function filterEmployees(query) {
-            var q = query.toLowerCase().trim();
-            var rows = document.querySelectorAll('#empTableBody tr');
-            var visibleCount = 0;
-            rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                if (!q || text.indexOf(q) !== -1) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
     </script>
 </body>
 </html>
+
+

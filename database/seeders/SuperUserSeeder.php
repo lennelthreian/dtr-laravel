@@ -17,7 +17,7 @@ class SuperUserSeeder extends Seeder
                 'name' => 'Super Admin',
                 'first_name' => 'Super',
                 'last_name' => 'Admin',
-                'emp_code' => 'ADMIN',
+                'bio_id' => 'ADMIN',
                 'username' => 'superadmin',
                 'office' => 'Admin Office',
                 'section' => 'Administration',
@@ -27,7 +27,7 @@ class SuperUserSeeder extends Seeder
         );
 
         DtrUser::updateOrCreate(
-            ['emp_code' => 'ADMIN'],
+            ['bio_id' => 'ADMIN'],
             [
                 'first_name' => 'Super',
                 'last_name' => 'Admin',

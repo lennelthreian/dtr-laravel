@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}" class="active"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -56,7 +57,13 @@
             <div class="card">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                     <h2 style="margin:0;">User Accounts ({{ $users->count() }})</h2>
-                    <input type="text" id="userSearch" placeholder="Search by name, username, or email..." style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:280px;outline:none;" oninput="filterUsers(this.value)">
+                    <form method="GET" action="{{ route('admin.users') }}" style="display:flex;gap:8px;">
+                        <input type="text" name="search" placeholder="Search by name, username, or email..." value="{{ request('search') }}" style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:220px;outline:none;">
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        @if (request('search'))
+                            <a href="{{ route('admin.users') }}" class="btn btn-outline btn-sm">Clear</a>
+                        @endif
+                    </form>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -70,9 +77,11 @@
                                 <th class="text-center">Super Action</th>
                                 <th class="text-center">COA Action</th>
                                 <th class="text-center">Password</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="userTableBody">
+                        <tbody>
                             @forelse ($users as $user)
                                 <tr>
                                     <td>{{ $user->name }}</td>
@@ -119,9 +128,45 @@
                                     <td class="text-center">
                                         <button class="btn btn-outline btn-sm" style="color:#f39c12;border-color:#f39c12;" onclick="openResetModal('{{ $user->name }}', '{{ route('admin.users.reset-password', $user) }}')">Reset</button>
                                     </td>
+                                    <td class="text-center">
+                                        @if ($user->trashed())
+                                            <span style="color:#dc2626;font-weight:600;">Deleted</span>
+                                        @elseif (!$user->is_active)
+                                            <span style="color:#f39c12;font-weight:600;">Inactive</span>
+                                        @else
+                                            <span style="color:#16a34a;font-weight:600;">Active</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @if ($user->id === auth()->id())
+                                            <span class="text-muted" style="font-size:12px;">(you)</span>
+                                        @else
+                                            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                                                @if ($user->trashed())
+                                                    <span class="text-muted" style="font-size:12px;">deleted</span>
+                                                @elseif (!$user->is_active)
+                                                    <form method="POST" action="{{ route('admin.users.activate', $user) }}">
+                                                        @csrf
+                                                        <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;">Activate</button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ route('admin.users.deactivate', $user) }}" onsubmit="return confirm('Deactivate {{ $user->name }}?')">
+                                                        @csrf
+                                                        <button class="btn btn-sm" style="background:#f39c12;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;">Deactivate</button>
+                                                    </form>
+                                                @endif
+                                                @unless ($user->trashed())
+                                                    <form method="POST" action="{{ route('admin.users.delete', $user) }}" onsubmit="return confirm('Permanently delete {{ $user->name }}? This action cannot be undone.')">
+                                                        @csrf
+                                                        <button class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;">Delete</button>
+                                                    </form>
+                                                @endunless
+                                            </div>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="text-center text-muted" style="padding:24px;">No users found.</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted" style="padding:24px;">No users found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -189,14 +234,8 @@
             if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
         })();
 
-        function filterUsers(query) {
-            var q = query.toLowerCase().trim();
-            var rows = document.querySelectorAll('#userTableBody tr');
-            rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
-            });
-        }
     </script>
 </body>
 </html>
+
+

@@ -9,7 +9,7 @@ class AddOfficeSectionSuperToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('office', 200)->nullable()->after('emp_code');
+            $table->string('office', 200)->nullable()->after('bio_id');
             $table->string('section', 200)->nullable()->after('office');
             $table->boolean('is_super')->default(false)->after('section');
         });

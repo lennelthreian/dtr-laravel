@@ -29,9 +29,29 @@ class LoginController extends Controller
         if (Auth::attempt($credentials, $request->filled('remember'))) {
             $request->session()->regenerate();
 
-            app(UserLogService::class)->login(Auth::id());
+            $user = Auth::user();
 
-            if (Auth::user()->is_super) {
+            if ($user->trashed()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return back()->withErrors([
+                    'username' => 'Your account has been deleted.',
+                ])->onlyInput('username');
+            }
+
+            if (!$user->is_active) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return back()->withErrors([
+                    'username' => 'Your account has been deactivated. Contact the administrator.',
+                ])->onlyInput('username');
+            }
+
+            app(UserLogService::class)->login($user->id);
+
+            if ($user->is_super) {
                 return redirect()->intended(route('admin.dashboard'));
             }
 

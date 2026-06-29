@@ -28,12 +28,29 @@
 <body>
     <div class="no-print" style="margin-bottom:20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button onclick="window.print()" class="btn btn-primary">Print All DTRs</button>
-        <button class="btn {{ $isShared ? 'btn-danger' : 'btn-accent' }}" onclick="toggleShare()" id="shareBtn">{{ $isShared ? 'Unshare from COA' : 'Share with COA' }}</button>
+        @if (auth()->user()->is_super)
+            @if ($pendingCount > 0 && !$isShared)
+                <button class="btn btn-outline" disabled style="opacity:0.6;cursor:not-allowed;" title="{{ $pendingCount }} pending edit request(s) must be resolved first">
+                    Share with COA ({{ $pendingCount }} pending)
+                </button>
+            @else
+                <button class="btn {{ $isShared ? 'btn-danger' : 'btn-accent' }}" onclick="toggleShare()" id="shareBtn">{{ $isShared ? 'Unshare from COA' : 'Share with COA' }}</button>
+            @endif
+        @endif
         <button onclick="toggleTheme()" class="btn btn-outline" id="themeToggle">Dark Mode</button>
         <a href="{{ route('dtr.index') }}" class="btn btn-outline" style="margin-left:auto;">&larr; Back</a>
     </div>
     @if (session('success'))
         <div class="alert alert-success no-print">{{ session('success') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger no-print">{{ session('error') }}</div>
+    @endif
+
+    @if ($pendingCount > 0)
+        <div class="alert alert-warning no-print" style="margin-bottom:16px;">
+            <strong>{{ $pendingCount }} pending edit request(s)</strong> for this month must be approved or rejected before DTRs can be shared with COA.
+        </div>
     @endif
 
     <div class="print-header no-print">

@@ -44,7 +44,7 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        DtrUser::where('emp_code', $user->emp_code)->update([
+        DtrUser::where('bio_id', $user->bio_id)->update([
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'],
             'last_name' => $data['last_name'],

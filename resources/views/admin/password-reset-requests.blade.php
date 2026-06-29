@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}" class="active"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -53,7 +54,16 @@
             @endif
 
             <div class="card">
-                <h2 style="margin:0 0 16px 0;">Pending Requests ({{ $pending->count() }})</h2>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                    <h2 style="margin:0;">Pending Requests ({{ $pending->count() }})</h2>
+                    <form method="GET" action="{{ route('admin.password-reset-requests') }}" style="display:flex;gap:8px;">
+                        <input type="text" name="search" placeholder="Search by employee name..." value="{{ request('search') }}" style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:220px;outline:none;">
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        @if (request('search'))
+                            <a href="{{ route('admin.password-reset-requests') }}" class="btn btn-outline btn-sm">Clear</a>
+                        @endif
+                    </form>
+                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -136,3 +146,5 @@
     </script>
 </body>
 </html>
+
+

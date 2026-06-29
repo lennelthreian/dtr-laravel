@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -68,7 +69,16 @@
             </div>
 
             <div class="card">
-                <h2>Sections ({{ $sections->count() }})</h2>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                    <h2 style="margin:0;">Sections ({{ $sections->count() }})</h2>
+                    <form method="GET" action="{{ route('admin.sections') }}" style="display:flex;gap:8px;">
+                        <input type="text" name="search" placeholder="Search sections or offices..." value="{{ request('search') }}" style="padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white);color:var(--gray-900);width:220px;outline:none;">
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        @if (request('search'))
+                            <a href="{{ route('admin.sections') }}" class="btn btn-outline btn-sm">Clear</a>
+                        @endif
+                    </form>
+                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -132,7 +142,7 @@
                     <select name="supervisor_id" id="modal_supervisor_id" class="form-control">
                         <option value="">&mdash; None &mdash;</option>
                         @foreach ($employees as $emp)
-                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->emp_code }})</option>
+                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->bio_id }})</option>
                         @endforeach
                     </select>
                 </div>
@@ -155,7 +165,7 @@
                     <select name="oic_id" id="modal_oic_id" class="form-control">
                         <option value="">&mdash; None &mdash;</option>
                         @foreach ($employees as $emp)
-                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->emp_code }})</option>
+                            <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->bio_id }})</option>
                         @endforeach
                     </select>
                 </div>
@@ -212,3 +222,5 @@
     </script>
 </body>
 </html>
+
+

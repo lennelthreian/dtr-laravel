@@ -25,6 +25,7 @@
                 <a href="{{ route('admin.users') }}"><span>Manage Users</span></a>
                 <a href="{{ route('admin.password-reset-requests') }}"><span>Reset Requests</span></a>
                 <a href="{{ route('admin.monitoring') }}"><span>Employee Monitoring</span></a>
+                <a href="{{ route('admin.coa-shares') }}"><span>COA Sharing</span></a>
                 <a href="{{ route('admin.holidays') }}"><span>Holidays & Suspensions</span></a>
                 <a href="{{ route('admin.work-arrangement') }}"><span>Work Arrangement</span></a>
                 <a href="{{ route('admin.logs') }}"><span>User Logs</span></a>
@@ -109,7 +110,7 @@
                                                 <option value="">-- Select User --</option>
                                                 @foreach ($users as $user)
                                                     <option value="{{ $user->id }}" {{ $setting->setting_value == $user->id ? 'selected' : '' }}>
-                                                        {{ $user->name }} ({{ $user->emp_code }})
+                                                        {{ $user->name }} ({{ $user->bio_id }})
                                                     </option>
                             @endforeach
                                             </select>
@@ -152,6 +153,32 @@
                     <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Settings</button>
                 </form>
             </div>
+
+            <div class="card" style="margin-top:20px;">
+                <h2 style="margin-bottom:12px;font-size:18px;">Database Backup</h2>
+                <p style="color:var(--gray-600);margin-bottom:16px;font-size:14px;">
+                    Backup both <strong>dtr_system</strong> and <strong>zkbiotime</strong> databases to Google Drive.
+                    Backups run automatically every day at 11:00 PM.
+                </p>
+
+                @if ($gDriveConfigured)
+                    <p style="color:#16a34a;font-size:13px;margin-bottom:12px;">
+                        &check; Google Drive is configured.
+                    </p>
+                @else
+                    <p style="color:#dc2626;font-size:13px;margin-bottom:12px;">
+                        &cross; Google Drive is not configured. Upload the service account JSON key to:
+                        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">storage/app/google-drive/service-account.json</code>
+                    </p>
+                @endif
+
+                <form method="POST" action="{{ route('admin.settings.backup') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary" {{ !$gDriveConfigured ? 'disabled' : '' }}>
+                        Backup Now to Google Drive
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
     <script>
@@ -175,3 +202,5 @@
     </script>
 </body>
 </html>
+
+

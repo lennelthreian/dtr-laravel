@@ -29,22 +29,22 @@ class SyncZktecoEmployees extends Command
         $usersCreated = 0;
 
         foreach ($zkEmployees as $emp) {
-            if (empty($emp->emp_code)) {
+            if (empty($emp->bio_id)) {
                 $skipped++;
                 continue;
             }
 
-            $empCode = trim($emp->emp_code);
+            $bioId = trim($emp->bio_id);
             $firstName = trim($emp->first_name ?? '');
             $lastName = trim($emp->last_name ?? '');
 
             if (empty($firstName) && empty($lastName)) {
                 $firstName = "Employee";
-                $lastName = $empCode;
+                $lastName = $bioId;
             }
 
             DtrUser::updateOrCreate(
-                ['emp_code' => $empCode],
+                ['bio_id' => $bioId],
                 [
                     'first_name' => $firstName,
                     'last_name' => $lastName,
@@ -56,16 +56,16 @@ class SyncZktecoEmployees extends Command
             $synced++;
 
             if ($this->option('create-users')) {
-                $existingUser = User::where('emp_code', $empCode)->first();
+                $existingUser = User::where('bio_id', $bioId)->first();
                 if (!$existingUser) {
-                    $username = 'employee' . $empCode;
-                    $email = $emp->email ?: $empCode . '@dtr.local';
+                    $username = 'employee' . $bioId;
+                    $email = $emp->email ?: $bioId . '@dtr.local';
 
                     User::create([
                         'name' => trim($firstName . ' ' . $lastName),
                         'first_name' => $firstName,
                         'last_name' => $lastName,
-                        'emp_code' => $empCode,
+                        'bio_id' => $bioId,
                         'username' => $username,
                         'email' => $email,
                         'password' => Hash::make('password'),
@@ -78,7 +78,7 @@ class SyncZktecoEmployees extends Command
 
         $this->info("Synced {$synced} employees to dtr_users.");
         if ($skipped > 0) {
-            $this->warn("Skipped {$skipped} employees with missing emp_code.");
+            $this->warn("Skipped {$skipped} employees with missing bio_id.");
         }
         if ($this->option('create-users')) {
             $this->info("Created {$usersCreated} user accounts (default password: 'password').");

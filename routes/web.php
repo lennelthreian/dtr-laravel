@@ -116,6 +116,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('settings');
     Route::post('/settings', [App\Http\Controllers\AdminController::class, 'updateSettings'])
         ->name('settings.update');
+    Route::post('/settings/backup', [App\Http\Controllers\AdminController::class, 'runBackup'])
+        ->name('settings.backup');
     Route::get('/holidays', [App\Http\Controllers\AdminController::class, 'holidays'])
         ->name('holidays');
     Route::post('/holidays', [App\Http\Controllers\AdminController::class, 'storeHoliday'])
@@ -144,6 +146,14 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
         ->name('users.toggle-coa');
     Route::post('/users/{user}/reset-password', [App\Http\Controllers\AdminController::class, 'resetUserPassword'])
         ->name('users.reset-password');
+    Route::post('/users/{user}/delete', [App\Http\Controllers\AdminController::class, 'deleteUser'])
+        ->name('users.delete');
+    Route::post('/users/{user}/deactivate', [App\Http\Controllers\AdminController::class, 'deactivateUser'])
+        ->name('users.deactivate');
+    Route::post('/users/{user}/activate', [App\Http\Controllers\AdminController::class, 'activateUser'])
+        ->name('users.activate');
     Route::post('/monitoring/issue-memo', [App\Http\Controllers\AdminController::class, 'issueMemo'])
         ->name('issue-memo');
+    Route::get('/coa-shares', [App\Http\Controllers\AdminController::class, 'coaShares'])
+        ->name('coa-shares');
 });

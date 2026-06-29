@@ -135,7 +135,7 @@ flowchart TB
 
     %% Biometrics → Sync → DB
     ZKMDB --> CMD
-    DTR_USERS -.->|emp_code| USERS
+    DTR_USERS -.->|bio_id| USERS
 
     %% DB → DTR Computation
     DTR_USERS --> FETCH_PUNCHES

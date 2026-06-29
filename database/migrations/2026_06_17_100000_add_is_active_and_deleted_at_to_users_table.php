@@ -4,19 +4,21 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddUsernameToUsersTable extends Migration
+class AddIsActiveAndDeletedAtToUsersTable extends Migration
 {
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('username', 50)->unique()->nullable()->after('bio_id');
+            $table->boolean('is_active')->default(true)->after('is_coa');
+            $table->softDeletes();
         });
     }
 
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('username');
+            $table->dropColumn('is_active');
+            $table->dropSoftDeletes();
         });
     }
 }

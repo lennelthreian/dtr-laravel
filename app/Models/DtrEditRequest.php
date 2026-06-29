@@ -37,9 +37,9 @@ class DtrEditRequest extends Model
         return $query->where('status', 'pending');
     }
 
-    public function scopeForEmployee($query, $empCode)
+    public function scopeForEmployee($query, $bioId)
     {
-        $employeeId = DtrUser::where('emp_code', $empCode)->value('id');
+        $employeeId = DtrUser::where('bio_id', $bioId)->value('id');
         return $employeeId ? $query->where('employee_id', $employeeId) : $query->whereRaw('0=1');
     }
 

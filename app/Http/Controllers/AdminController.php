@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DtrEditRequest;
+use App\Models\DtrMonthlyShare;
 use App\Models\DtrSetting;
 use App\Models\DtrUser;
 use App\Models\GlobalHoliday;
@@ -33,9 +35,13 @@ class AdminController extends Controller
         return view('admin.dashboard', compact('officeCount', 'sectionCount', 'employeeCount', 'unassignedCount'));
     }
 
-    public function offices()
+    public function offices(Request $request)
     {
-        $offices = Office::with(['sections', 'supervisor', 'seniorManager', 'oic', 'seniorManagerOic'])->withCount('sections')->orderBy('name')->get();
+        $offices = Office::with(['sections', 'supervisor', 'seniorManager', 'oic', 'seniorManagerOic'])->withCount('sections')->orderBy('name');
+        if ($request->filled('search')) {
+            $offices->where('name', 'like', '%' . $request->search . '%');
+        }
+        $offices = $offices->get();
         $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
         return view('admin.offices', compact('offices', 'employees'));
     }
@@ -89,10 +95,20 @@ class AdminController extends Controller
         return redirect()->route('admin.offices')->with('success', 'Senior Manager OIC assigned.');
     }
 
-    public function sections()
+    public function sections(Request $request)
     {
         $offices = Office::with('sections')->orderBy('name')->get();
-        $sections = Section::with(['office', 'supervisor', 'oic'])->orderBy('name')->get();
+        $sections = Section::with(['office', 'supervisor', 'oic'])->orderBy('name');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $sections->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhereHas('office', function ($oq) use ($search) {
+                      $oq->where('name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+        $sections = $sections->get();
         $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
         return view('admin.sections', compact('offices', 'sections', 'employees'));
     }
@@ -131,12 +147,22 @@ class AdminController extends Controller
         return redirect()->route('admin.sections')->with('success', 'Section OIC assigned.');
     }
 
-    public function employees()
+    public function employees(Request $request)
     {
         $employees = DtrUser::with(['officeModel', 'sectionModel'])
             ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+            ->orderBy('first_name');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $employees->where(function ($q) use ($search) {
+                $q->where('bio_id', 'like', '%' . $search . '%')
+                  ->orWhere('last_name', 'like', '%' . $search . '%')
+                  ->orWhere('first_name', 'like', '%' . $search . '%')
+                  ->orWhere('office', 'like', '%' . $search . '%')
+                  ->orWhere('section', 'like', '%' . $search . '%');
+            });
+        }
+        $employees = $employees->get();
         $offices = Office::with('sections')->orderBy('name')->get();
         return view('admin.employees', compact('employees', 'offices'));
     }
@@ -163,7 +189,7 @@ class AdminController extends Controller
 
     public function resetPassword(DtrUser $employee)
     {
-        $user = User::where('emp_code', $employee->emp_code)->first();
+        $user = User::where('bio_id', $employee->bio_id)->first();
 
         if (!$user) {
             return redirect()->route('admin.employees')
@@ -184,8 +210,9 @@ class AdminController extends Controller
         $settingModels = DtrSetting::whereNotIn('setting_key', ['grace_period_minutes', 'office_name'])
             ->orderByRaw('FIELD(setting_key, "' . implode('","', $order) . '")')
             ->get();
-        $users = User::orderBy('name')->get(['id', 'name', 'emp_code']);
-        return view('admin.settings', compact('settingModels', 'users'));
+        $users = User::orderBy('name')->get(['id', 'name', 'bio_id']);
+        $gDriveConfigured = app(\App\Services\GoogleDriveService::class)->isConfigured();
+        return view('admin.settings', compact('settingModels', 'users', 'gDriveConfigured'));
     }
 
     public function updateSettings(Request $request)
@@ -223,12 +250,19 @@ class AdminController extends Controller
     {
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
+        $search = $request->input('search');
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
         $holidays = GlobalHoliday::whereBetween('target_date', ["$year-$month-01", "$year-$month-$daysInMonth"])
-            ->orderBy('target_date')
-            ->get()
+            ->orderBy('target_date');
+        if ($search) {
+            $holidays->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                  ->orWhere('type', 'like', '%' . $search . '%');
+            });
+        }
+        $holidays = $holidays->get()
             ->keyBy(function ($item) {
                 return $item->target_date->format('Y-m-d');
             });
@@ -253,7 +287,7 @@ class AdminController extends Controller
             }
         }
 
-        return view('admin.holidays', compact('holidays', 'month', 'year', 'daysInMonth', 'weeks'));
+        return view('admin.holidays', compact('holidays', 'month', 'year', 'daysInMonth', 'weeks', 'search'));
     }
 
     public function storeHoliday(Request $request)
@@ -285,9 +319,18 @@ class AdminController extends Controller
             ->with('success', 'Removed.');
     }
 
-    public function workArrangement()
+    public function workArrangement(Request $request)
     {
-        $employees = DtrUser::orderBy('last_name')->orderBy('first_name')->get();
+        $employees = DtrUser::orderBy('last_name')->orderBy('first_name');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $employees->where(function ($q) use ($search) {
+                $q->where('bio_id', 'like', '%' . $search . '%')
+                  ->orWhere('last_name', 'like', '%' . $search . '%')
+                  ->orWhere('first_name', 'like', '%' . $search . '%');
+            });
+        }
+        $employees = $employees->get();
         $globalSetting = DtrSetting::where('setting_key', 'four_day_work_week')->first();
         return view('admin.work-arrangement', compact('employees', 'globalSetting'));
     }
@@ -314,6 +357,11 @@ class AdminController extends Controller
     public function logs(Request $request)
     {
         $query = UserLog::with('user');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('description', 'like', '%' . $search . '%');
+        }
 
         if ($request->filled('action')) {
             $query->byAction($request->action);
@@ -343,24 +391,45 @@ class AdminController extends Controller
         return view('admin.logs', compact('logs', 'actions', 'users'));
     }
 
-    public function passwordResetRequests()
+    public function passwordResetRequests(Request $request)
     {
         $pending = PasswordResetRequest::where('status', 'pending')
             ->with('user')
-            ->latest()
-            ->get();
+            ->latest();
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $pending->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            });
+        }
+        $pending = $pending->get();
 
         $resolved = PasswordResetRequest::where('status', 'reset')
             ->with('user')
-            ->latest()
-            ->get();
+            ->latest();
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $resolved->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            });
+        }
+        $resolved = $resolved->get();
 
         return view('admin.password-reset-requests', compact('pending', 'resolved'));
     }
 
-    public function users()
+    public function users(Request $request)
     {
-        $users = User::orderBy('name')->get();
+        $users = User::withTrashed()->orderBy('name');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $users->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('username', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%');
+            });
+        }
+        $users = $users->get();
         return view('admin.users', compact('users'));
     }
 
@@ -391,6 +460,32 @@ class AdminController extends Controller
             ->with('success', "COA privileges {$action} for {$user->name}.");
     }
 
+    public function coaShares(Request $request)
+    {
+        $month = (int) $request->input('month', date('m'));
+        $year = (int) $request->input('year', date('Y'));
+
+        $sharedMonths = DtrMonthlyShare::with('sharedBy')
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $sharedMonths->whereHas('sharedBy', function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            });
+        }
+        $sharedMonths = $sharedMonths->get();
+
+        $isCurrentShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $pendingCount = DtrEditRequest::whereBetween('target_date', ["$year-$month-01", "$year-$month-$daysInMonth"])
+            ->where('status', 'pending')
+            ->count();
+
+        return view('admin.coa-shares', compact('sharedMonths', 'month', 'year', 'isCurrentShared', 'pendingCount'));
+    }
+
     public function monitoring(Request $request)
     {
         $month = (int) $request->input('month', date('m'));
@@ -398,13 +493,21 @@ class AdminController extends Controller
 
         $employees = DtrUser::where('is_active', true)
             ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+            ->orderBy('first_name');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $employees->where(function ($q) use ($search) {
+                $q->where('last_name', 'like', '%' . $search . '%')
+                  ->orWhere('first_name', 'like', '%' . $search . '%')
+                  ->orWhere('bio_id', 'like', '%' . $search . '%');
+            });
+        }
+        $employees = $employees->get();
 
         $dtrController = app(DtrController::class);
         $stats = [];
         foreach ($employees as $emp) {
-            $result = $dtrController->getEmployeeMonthlyStats($emp->emp_code, $year, $month);
+            $result = $dtrController->getEmployeeMonthlyStats($emp->bio_id, $year, $month);
             if ($result) {
                 $stats[] = $result;
             }
@@ -450,6 +553,47 @@ class AdminController extends Controller
             ->with('success', "Password for {$user->name} reset to \"password\".");
     }
 
+    public function deleteUser(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        $userName = $user->name;
+        $user->delete();
+
+        app(UserLogService::class)->log(auth()->id(), 'delete', "Deleted user {$userName}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "User {$userName} has been deleted.");
+    }
+
+    public function deactivateUser(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')
+                ->with('error', 'You cannot deactivate your own account.');
+        }
+
+        $user->update(['is_active' => false]);
+
+        app(UserLogService::class)->log(auth()->id(), 'update', "Deactivated user {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "User {$user->name} has been deactivated.");
+    }
+
+    public function activateUser(User $user)
+    {
+        $user->update(['is_active' => true]);
+
+        app(UserLogService::class)->log(auth()->id(), 'update', "Activated user {$user->name}", User::class, $user->id);
+
+        return redirect()->route('admin.users')
+            ->with('success', "User {$user->name} has been activated.");
+    }
+
     public function approvePasswordReset(PasswordResetRequest $resetRequest)
     {
         if ($resetRequest->status !== 'pending') {
@@ -467,5 +611,16 @@ class AdminController extends Controller
 
         return redirect()->route('admin.password-reset-requests')
             ->with('success', "Password for {$user->name} reset to \"password\".");
+    }
+
+    public function runBackup()
+    {
+        \Artisan::call('backup:run');
+        $output = \Artisan::output();
+
+        app(UserLogService::class)->log(auth()->id(), 'backup', 'Manual database backup triggered');
+
+        return redirect()->route('admin.settings')
+            ->with('success', 'Database backup completed. Check Google Drive.');
     }
 }

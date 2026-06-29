@@ -18,7 +18,7 @@ class IclockTransaction extends Model
     ];
 
     protected $fillable = [
-        'emp_code', 'punch_time', 'punch_state', 'verify_type',
+        'bio_id', 'punch_time', 'punch_state', 'verify_type',
         'work_code', 'terminal_sn', 'terminal_alias', 'area_alias',
         'longitude', 'latitude', 'gps_location', 'mobile',
         'source', 'purpose', 'crc', 'is_attendance', 'reserved',
@@ -26,9 +26,9 @@ class IclockTransaction extends Model
         'temperature', 'emp_id', 'terminal_id', 'company_code',
     ];
 
-    public function scopeForEmployee($query, $empCode)
+    public function scopeForEmployee($query, $bioId)
     {
-        return $query->where('emp_code', $empCode);
+        return $query->where('bio_id', $bioId);
     }
 
     public function scopeForPeriod($query, $startDate, $endDate)

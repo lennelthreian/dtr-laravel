@@ -38,7 +38,7 @@ class EditRequestRejected extends Notification
         return [
             'type' => 'edit_request_rejected',
             'edit_request_id' => $this->editRequest->id,
-            'emp_code' => $employee->emp_code,
+            'bio_id' => $employee->bio_id,
             'request_type' => $typeLabels[$this->editRequest->type] ?? $this->editRequest->type,
             'target_date' => $this->editRequest->target_date->format('Y-m-d'),
             'reason' => $this->editRequest->rejection_reason,
