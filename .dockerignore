@@ -1,0 +1,15 @@
+.git
+.gitignore
+.gitattributes
+__pycache__
+.vscode
+node_modules
+vendor
+.env
+serve.py
+serve.exe
+stop
+DTR_FLOWCHART.md
+DTR_FLOWCHART.png
+README.md
+*.log

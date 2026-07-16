@@ -55,10 +55,10 @@
                 @if ($dtrData)
                     <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>
                     @if ($currentUser->is_super && $month && $year)
-                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year]) }}" class="btn btn-accent btn-sm">Print All DTRs</a>
+                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-accent btn-sm">Print All DTRs</a>
                     @endif
                     @if ($currentUser->is_coa && $month && $year)
-                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year]) }}" class="btn btn-primary btn-sm">View All DTRs</a>
+                        <a href="{{ route('dtr.print-all', ['month' => $month, 'year' => $year, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-primary btn-sm">View All DTRs</a>
                     @endif
                 @endif
                 @php $unread = $currentUser->unreadNotifications; @endphp
@@ -159,6 +159,14 @@
                                         @endfor
                                     </select>
                                 </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="cut_off">Cut-Off Period</label>
+                                <select name="cut_off" id="cut_off" class="form-control">
+                                    <option value="all" {{ ($cutOff ?? 'all') === 'all' ? 'selected' : '' }}>Whole Month</option>
+                                    <option value="1" {{ ($cutOff ?? '') === '1' ? 'selected' : '' }}>1st Cut-Off (1-15)</option>
+                                    <option value="2" {{ ($cutOff ?? '') === '2' ? 'selected' : '' }}>2nd Cut-Off (16-End)</option>
+                                </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Generate DTR</button>
                         </form>

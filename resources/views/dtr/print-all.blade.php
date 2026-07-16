@@ -37,8 +37,17 @@
                 <button class="btn {{ $isShared ? 'btn-danger' : 'btn-accent' }}" onclick="toggleShare()" id="shareBtn">{{ $isShared ? 'Unshare from COA' : 'Share with COA' }}</button>
             @endif
         @endif
+        <form method="get" action="{{ route('dtr.print-all') }}" style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;">
+            <input type="hidden" name="month" value="{{ $month }}">
+            <input type="hidden" name="year" value="{{ $year }}">
+            <select name="cut_off" onchange="this.form.submit()" style="padding:6px 10px; border:1.5px solid var(--gray-300); border-radius:4px; font-size:13px; background:var(--white);">
+                <option value="all" {{ ($cutOff ?? 'all') === 'all' ? 'selected' : '' }}>Whole Month</option>
+                <option value="1" {{ ($cutOff ?? '') === '1' ? 'selected' : '' }}>1st Cut-Off (1-15)</option>
+                <option value="2" {{ ($cutOff ?? '') === '2' ? 'selected' : '' }}>2nd Cut-Off (16-End)</option>
+            </select>
+        </form>
         <button onclick="toggleTheme()" class="btn btn-outline" id="themeToggle">Dark Mode</button>
-        <a href="{{ route('dtr.index') }}" class="btn btn-outline" style="margin-left:auto;">&larr; Back</a>
+        <a href="{{ route('dtr.index', ['month' => $month, 'year' => $year, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-outline" style="margin-left:auto;">&larr; Back</a>
     </div>
     @if (session('success'))
         <div class="alert alert-success no-print">{{ session('success') }}</div>
@@ -55,7 +64,7 @@
 
     <div class="print-header no-print">
         <h1>All Employees' DTR</h1>
-        <p>{{ $monthName }} {{ $year }} &mdash; {{ count($allDtrs) }} employees</p>
+        <p>{{ $cutOffLabel }} {{ $year }} &mdash; {{ count($allDtrs) }} employees</p>
     </div>
 
     @foreach ($allDtrs as $index => $item)
@@ -63,6 +72,7 @@
             $presentDays = 0; $totalMin = 0; $totalLate = 0; $totalUndertime = 0;
             $empDefaultWW = $item['employee']->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
             foreach ($item['dtrData'] as $dayNum => $day) {
+                if ($dayNum < $cutOffStartDay || $dayNum > $cutOffEndDay) continue;
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
                 $dayMaxDow = isset($day['work_week_type']) ? ($day['work_week_type'] === '4-day' ? 4 : 5) : ($empDefaultWW === '4-day' ? 4 : 5);
                 if (!empty($day['has_punch']) && $dow <= $dayMaxDow && empty($day['is_holiday']) && empty($day['is_work_suspension'])) {

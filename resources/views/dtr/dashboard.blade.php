@@ -91,7 +91,7 @@
                     <h1 style="font-size:18px; color:var(--primary); margin:0;">Dashboard</h1>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    @if ($employee)<a href="{{ route('dtr.show', ['emp' => $employee->emp_code, 'month' => $month, 'year' => $year]) }}" class="btn btn-primary btn-sm">View Full DTR</a>@endif
+                    @if ($employee)<a href="{{ route('dtr.show', ['emp' => $employee->emp_code, 'month' => $month, 'year' => $year, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-primary btn-sm">View Full DTR</a>@endif
                     @php $unread = $currentUser->unreadNotifications; @endphp
                     <div class="notif-pos">
                         <button class="notif-btn" onclick="toggleNotif()">&#128276;
@@ -175,9 +175,20 @@
 
                 <div class="card" style="padding:16px;">
                     <div class="cal-month-nav">
-                        <a href="{{ route('dtr.dashboard', ['month' => $month > 1 ? $month - 1 : 12, 'year' => $month > 1 ? $year : $year - 1]) }}" class="btn btn-outline btn-sm">&larr; {{ date('M', mktime(0, 0, 0, $month > 1 ? $month - 1 : 12, 1)) }}</a>
-                        <h2>{{ $monthName }} {{ $year }}</h2>
-                        <a href="{{ route('dtr.dashboard', ['month' => $month < 12 ? $month + 1 : 1, 'year' => $month < 12 ? $year : $year + 1]) }}" class="btn btn-outline btn-sm">{{ date('M', mktime(0, 0, 0, $month < 12 ? $month + 1 : 1, 1)) }} &rarr;</a>
+                        <a href="{{ route('dtr.dashboard', ['month' => $month > 1 ? $month - 1 : 12, 'year' => $month > 1 ? $year : $year - 1, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-outline btn-sm">&larr; {{ date('M', mktime(0, 0, 0, $month > 1 ? $month - 1 : 12, 1)) }}</a>
+                        <h2>{{ $cutOffLabel }} {{ $year }}</h2>
+                        <a href="{{ route('dtr.dashboard', ['month' => $month < 12 ? $month + 1 : 1, 'year' => $month < 12 ? $year : $year + 1, 'cut_off' => $cutOff ?? 'all']) }}" class="btn btn-outline btn-sm">{{ date('M', mktime(0, 0, 0, $month < 12 ? $month + 1 : 1, 1)) }} &rarr;</a>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                        <form method="get" action="{{ route('dtr.dashboard') }}" style="display:inline-flex;align-items:center;gap:4px;">
+                            <input type="hidden" name="month" value="{{ $month }}">
+                            <input type="hidden" name="year" value="{{ $year }}">
+                            <select name="cut_off" onchange="this.form.submit()" style="padding:6px 10px; border:1.5px solid var(--gray-300); border-radius:4px; font-size:13px; background:var(--white);">
+                                <option value="all" {{ ($cutOff ?? 'all') === 'all' ? 'selected' : '' }}>Whole Month</option>
+                                <option value="1" {{ ($cutOff ?? '') === '1' ? 'selected' : '' }}>1st Cut-Off (1-15)</option>
+                                <option value="2" {{ ($cutOff ?? '') === '2' ? 'selected' : '' }}>2nd Cut-Off (16-End)</option>
+                            </select>
+                        </form>
                     </div>
 
                     <div class="cal-grid">

@@ -13,7 +13,7 @@
     </tr>
     <tr>
         <td colspan="2" class="dtr-header-right" style="text-align:left;">
-            <h2 style="font-size:14px; margin:4px 0 0; text-align:center; font-weight:400;">For the month of <u>{{ $monthName }} {{ $year }}</u></h2>
+            <h2 style="font-size:14px; margin:4px 0 0; text-align:center; font-weight:400;">For the period of <u>{{ $cutOffLabel }} {{ $year }}</u></h2>
         </td>
     </tr>
 </table>
@@ -21,7 +21,7 @@
 @php
     $empMaxDow = $employee->default_work_week === '4-day' ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5));
     $totalWeekdays = 0; $presentWeekdays = 0; $totalSaturdays = 0; $presentSaturdays = 0;
-    for ($d = 1; $d <= $daysInMonth; $d++) {
+    for ($d = $cutOffStartDay; $d <= $cutOffEndDay; $d++) {
         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
         $dayMaxDow = (isset($dtrData[$d]['work_week_type']) ? ($dtrData[$d]['work_week_type'] === '4-day' ? 4 : 5) : $empMaxDow);
         $isExcluded = isset($dtrData[$d]) && (!empty($dtrData[$d]['is_holiday']) || !empty($dtrData[$d]['is_work_suspension']));
@@ -79,17 +79,25 @@
             @php
                 $dayWW = $dtrData[$d]['work_week_type'] ?? $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
             @endphp
+            @php $inCutOff = $d >= $cutOffStartDay && $d <= $cutOffEndDay; @endphp
             <tr class="{{ $rowClass }}">
                 <td class="day-col">
                     {{ $d }}
                     <span class="dow">{{ substr($dayOfWeek, 0, 3) }}</span>
-                    @if (isset($isOwnDtr) && $isOwnDtr)
+                    @if ($inCutOff && isset($isOwnDtr) && $isOwnDtr)
                         <span class="ww-badge ww-clickable no-print" onclick="toggleDayWorkWeek('{{ $dateStr }}', '{{ $dayWW === '4-day' ? '5-day' : '4-day' }}')">{{ $dayWW === '4-day' ? '4d' : '5d' }}</span>
                     @elseif (isset($dtrData[$d]['work_week_type']))
                         <span class="ww-badge no-print">{{ $dayWW === '4-day' ? '4d' : '5d' }}</span>
                     @endif
                 </td>
-                @if (!empty($dtrData[$d]['so_number']) && strpos($dtrData[$d]['remarks'] ?? '', '(AM)') === false && strpos($dtrData[$d]['remarks'] ?? '', '(PM)') === false)
+                @if (!$inCutOff)
+                    <td class="time-col"></td>
+                    <td class="time-col"></td>
+                    <td class="time-col"></td>
+                    <td class="time-col"></td>
+                    <td class="hours-col"></td>
+                    <td class="remarks-col"></td>
+                @elseif (!empty($dtrData[$d]['so_number']) && strpos($dtrData[$d]['remarks'] ?? '', '(AM)') === false && strpos($dtrData[$d]['remarks'] ?? '', '(PM)') === false)
                     <td class="time-col has-val" colspan="4" style="text-align:center;">SO: {{ $dtrData[$d]['so_number'] }}</td>
                     <td class="hours-col has-val">{{ $dtrData[$d]['total_hours'] }}</td>
                     <td class="remarks-col">{{ $dtrData[$d]['remarks'] }}</td>
@@ -200,7 +208,7 @@
                     <td class="hours-col"></td>
                     <td class="remarks-col"></td>
                 @endif
-                @if (isset($isOwnDtr) && $isOwnDtr)
+                @if ($inCutOff && isset($isOwnDtr) && $isOwnDtr)
                     <td class="action-col no-print">
                         @php
                             $ai = isset($dtrData[$d]) ? $dtrData[$d]['am_in'] : '';

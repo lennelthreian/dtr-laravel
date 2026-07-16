@@ -50,7 +50,7 @@
         <div class="main-content">
             <div class="navbar no-print" style="margin-bottom:20px;">
                 <div class="navbar-left">
-                    <h1 style="font-size:18px; color:var(--primary); margin:0;">{{ $employee->full_name }} &mdash; {{ $monthName }} {{ $year }}</h1>
+                    <h1 style="font-size:18px; color:var(--primary); margin:0;">{{ $employee->full_name }} &mdash; {{ $cutOffLabel }} {{ $year }}</h1>
                 </div>
                 <button onclick="window.print()" class="btn btn-primary btn-sm">Print / Save PDF</button>
                 @php $unread = $currentUser->unreadNotifications; @endphp
@@ -105,6 +105,11 @@
                         @for ($y = date('Y') - 2; $y <= date('Y') + 1; $y++)
                             <option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
                         @endfor
+                    </select>
+                    <select name="cut_off" onchange="this.form.submit()" style="padding:6px 10px; border:1.5px solid var(--gray-300); border-radius:4px; font-size:13px; background:var(--white);">
+                        <option value="all" {{ ($cutOff ?? 'all') === 'all' ? 'selected' : '' }}>Whole Month</option>
+                        <option value="1" {{ ($cutOff ?? '') === '1' ? 'selected' : '' }}>1st Cut-Off</option>
+                        <option value="2" {{ ($cutOff ?? '') === '2' ? 'selected' : '' }}>2nd Cut-Off</option>
                     </select>
                 </form>
             </div>

@@ -116,10 +116,20 @@ class DtrController extends Controller
         $totalUndertime = null;
         $employee = null;
         $approvedRequests = collect();
+        $cutOff = 'all';
+        $cutOffStartDay = 1;
+        $cutOffEndDay = 31;
+        $cutOffLabel = '';
 
         if ($request->has('month') && $request->has('year')) {
             $month = (int) $request->month;
             $year = (int) $request->year;
+
+            $cutOff = $request->input('cut_off', 'all');
+            if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
+            $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
+            $cutOffStartDay = $cutOffRange['start_day'];
+            $cutOffEndDay = $cutOffRange['end_day'];
 
             if ($user->is_coa) {
                 $isShared = DtrMonthlyShare::where('month', $month)->where('year', $year)->exists();
@@ -471,7 +481,7 @@ class DtrController extends Controller
                                 }
                             }
                         }
-                        if (strpos($day['remarks'] ?? '', 'WFH') === false) {
+                        if (strpos($day['remarks'] ?? '', 'WFH') === false && empty($day['so_number']) && empty($day['to_number']) && empty($day['ob_number'])) {
                             $actualMins = $isAm
                                 ? $this->computePunchMinutes($day['pm_in'] ?? '', $day['pm_out'] ?? '')
                                 : $this->computePunchMinutes($day['am_in'] ?? '', $day['am_out'] ?? '');
@@ -524,6 +534,11 @@ class DtrController extends Controller
                                     $day['total_hours'] = $day['work_week_type'] === '4-day' ? '10:00' : '08:00';
                                 }
                             }
+                            if (!empty($day['so_number'])) {
+                                $day['remarks'] = preg_replace('/\|\s*UT:\s*\d{2}:\d{2}/', '', $day['remarks'] ?? '');
+                                $day['remarks'] = preg_replace('/UT:\s*\d{2}:\d{2}\s*\|?/', '', $day['remarks']);
+                                $day['remarks'] = trim($day['remarks'], ' |');
+                            }
                         } elseif (strpos($day['remarks'] ?? '', 'Halfday') !== false) {
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                         }
@@ -549,7 +564,7 @@ class DtrController extends Controller
                             $parts = explode(':', $day['total_hours']);
                             $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                         }
-                        $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
+                        $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                         $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                         $parts = [];
                         if ($remarks !== '') $parts[] = $remarks;
@@ -564,6 +579,7 @@ class DtrController extends Controller
                     $totalUndertime = 0;
 
                     foreach ($dtrData as $dayNum => $day) {
+                        if ($dayNum < $cutOffStartDay || $dayNum > $cutOffEndDay) continue;
                         $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
                         $dayMaxDow = isset($day['work_week_type']) ? ($day['work_week_type'] === '4-day' ? 4 : 5) : ((isset($employee) && $employee->default_work_week === '4-day') ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5)));
                         if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
@@ -598,7 +614,7 @@ class DtrController extends Controller
             'employees', 'dtrData', 'month', 'year', 'monthName',
             'daysInMonth', 'presentDays', 'totalMinutes', 'totalLate',
             'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor',
-            'approvedRequests', 'canViewAll'
+            'approvedRequests', 'canViewAll', 'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'
         ));
     }
 
@@ -971,10 +987,12 @@ class DtrController extends Controller
             }
             $ww = $day['work_week_type'] ?? $empDefaultWW;
             $expectedHalfMins = $ww === '4-day' ? 300 : 240;
-            $utMins = $expectedHalfMins - $actualMins;
-            if ($utMins > 0) {
-                $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
-                $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+            if (empty($day['so_number']) && empty($day['to_number']) && empty($day['ob_number'])) {
+                $utMins = $expectedHalfMins - $actualMins;
+                if ($utMins > 0) {
+                    $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
+                    $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+                }
             }
             if ($lateUt) {
                 $day['remarks'] .= ' | ' . $lateUt;
@@ -1044,6 +1062,11 @@ class DtrController extends Controller
                         $day['total_hours'] = $day['work_week_type'] === '4-day' ? '10:00' : '08:00';
                     }
                 }
+                if (!empty($day['so_number'])) {
+                    $day['remarks'] = preg_replace('/\|\s*UT:\s*\d{2}:\d{2}/', '', $day['remarks'] ?? '');
+                    $day['remarks'] = preg_replace('/UT:\s*\d{2}:\d{2}\s*\|?/', '', $day['remarks']);
+                    $day['remarks'] = trim($day['remarks'], ' |');
+                }
             } elseif (strpos($day['remarks'] ?? '', 'Halfday') !== false) {
                 $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
             }
@@ -1069,7 +1092,7 @@ class DtrController extends Controller
                 $parts = explode(':', $day['total_hours']);
                 $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
             }
-            $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
+            $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
             $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
             $parts = [];
             if ($remarks !== '') $parts[] = $remarks;
@@ -1084,6 +1107,7 @@ class DtrController extends Controller
         $totalUndertime = 0;
 
         foreach ($dtrData as $dayNum => $day) {
+            if ($dayNum < $cutOffStartDay || $dayNum > $cutOffEndDay) continue;
             $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
             $dayMaxDow = isset($day['work_week_type']) ? ($day['work_week_type'] === '4-day' ? 4 : 5) : ((isset($employee) && $employee->default_work_week === '4-day') ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5)));
             if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
@@ -1141,11 +1165,19 @@ class DtrController extends Controller
         $approvedRequests = $allEmpRequests->where('status', 'approved')->sortBy('target_date');
         $rejectedRequests = $allEmpRequests->where('status', 'rejected')->sortByDesc('created_at');
 
+        $cutOff = $request->input('cut_off', 'all');
+        if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
+        $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
+        $cutOffStartDay = $cutOffRange['start_day'];
+        $cutOffEndDay = $cutOffRange['end_day'];
+        $cutOffLabel = $cutOffRange['label'];
+
         return view('dtr.show', compact(
             'employee', 'settings', 'dtrData', 'month', 'year',
             'daysInMonth', 'monthName', 'presentDays',
             'totalMinutes', 'totalLate', 'totalUndertime',
-            'isOwnDtr', 'isSupervisor', 'pendingRequests', 'approvedRequests', 'rejectedRequests'
+            'isOwnDtr', 'isSupervisor', 'pendingRequests', 'approvedRequests', 'rejectedRequests',
+            'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'
         ));
     }
 
@@ -1158,6 +1190,13 @@ class DtrController extends Controller
 
         $month = (int) $request->input('month', date('m'));
         $year = (int) $request->input('year', date('Y'));
+
+        $cutOff = $request->input('cut_off', 'all');
+        if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
+        $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
+        $cutOffStartDay = $cutOffRange['start_day'];
+        $cutOffEndDay = $cutOffRange['end_day'];
+        $cutOffLabel = $cutOffRange['label'];
 
         $employee = DtrUser::where('emp_code', $user->emp_code)->first();
 
@@ -1393,10 +1432,12 @@ class DtrController extends Controller
                 }
                 $ww = $day['work_week_type'] ?? $empDefaultWW;
                 $expectedHalfMins = $ww === '4-day' ? 300 : 240;
-                $utMins = $expectedHalfMins - $actualMins;
-                if ($utMins > 0) {
-                    $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
-                    $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+                if (empty($day['so_number']) && empty($day['to_number']) && empty($day['ob_number'])) {
+                    $utMins = $expectedHalfMins - $actualMins;
+                    if ($utMins > 0) {
+                        $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
+                        $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+                    }
                 }
                 if ($lateUt) {
                     $day['remarks'] .= ' | ' . $lateUt;
@@ -1429,6 +1470,11 @@ class DtrController extends Controller
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '10:00' : '08:00';
                         }
                     }
+                    if (!empty($day['so_number'])) {
+                        $day['remarks'] = preg_replace('/\|\s*UT:\s*\d{2}:\d{2}/', '', $day['remarks'] ?? '');
+                        $day['remarks'] = preg_replace('/UT:\s*\d{2}:\d{2}\s*\|?/', '', $day['remarks']);
+                        $day['remarks'] = trim($day['remarks'], ' |');
+                    }
                 }
 
                 $wfhLabel = $this->resolveWfhLabel($day);
@@ -1452,7 +1498,7 @@ class DtrController extends Controller
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
-                $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
+                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                 $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
@@ -1465,6 +1511,7 @@ class DtrController extends Controller
             $undertimeDaysCount = 0;
             $absentDaysCount = 0;
             foreach ($dtrData as $dayNum => $day) {
+                if ($dayNum < $cutOffStartDay || $dayNum > $cutOffEndDay) continue;
                 $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $dayNum)));
                 $dayMaxDow = $empDefaultWW === '4-day' ? 4 : 5;
                 if (!empty($day['has_punch']) && $dow <= $dayMaxDow) {
@@ -1535,7 +1582,8 @@ class DtrController extends Controller
         return view('dtr.dashboard', compact(
             'employee', 'settings', 'dtrData', 'month', 'year',
             'daysInMonth', 'monthName', 'presentDays', 'totalHoursFormatted',
-            'weeks', 'empDefaultWW', 'isSupervisor', 'lateDaysCount', 'undertimeDaysCount', 'absentDaysCount'
+            'weeks', 'empDefaultWW', 'isSupervisor', 'lateDaysCount', 'undertimeDaysCount', 'absentDaysCount',
+            'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'
         ));
     }
 
@@ -1669,6 +1717,11 @@ class DtrController extends Controller
             if (!$isSpecial) {
                 $schedule = $this->getScheduleForWorkWeek($day['work_week_type'] ?? $empDefaultWW, $settings);
                 $day['remarks'] = $this->recalcRemarks($day, $settings, $schedule);
+            }
+            if (!empty($day['so_number'])) {
+                $day['remarks'] = preg_replace('/\|\s*UT:\s*\d{2}:\d{2}/', '', $day['remarks'] ?? '');
+                $day['remarks'] = preg_replace('/UT:\s*\d{2}:\d{2}\s*\|?/', '', $day['remarks']);
+                $day['remarks'] = trim($day['remarks'], ' |');
             }
         }
         unset($day);
@@ -2028,10 +2081,12 @@ class DtrController extends Controller
                 }
                 $ww = $day['work_week_type'] ?? $empDefaultWW;
                 $expectedHalfMins = $ww === '4-day' ? 300 : 240;
-                $utMins = $expectedHalfMins - $actualMins;
-                if ($utMins > 0) {
-                    $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
-                    $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+                if (empty($day['so_number']) && empty($day['to_number']) && empty($day['ob_number'])) {
+                    $utMins = $expectedHalfMins - $actualMins;
+                    if ($utMins > 0) {
+                        $utStr = 'UT: ' . gmdate('H:i', $utMins * 60);
+                        $lateUt = $lateUt ? $lateUt . ' | ' . $utStr : $utStr;
+                    }
                 }
                 if ($lateUt) {
                     $day['remarks'] .= ' | ' . $lateUt;
@@ -2071,6 +2126,11 @@ class DtrController extends Controller
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '10:00' : '08:00';
                         }
                     }
+                    if (!empty($day['so_number'])) {
+                        $day['remarks'] = preg_replace('/\|\s*UT:\s*\d{2}:\d{2}/', '', $day['remarks'] ?? '');
+                        $day['remarks'] = preg_replace('/UT:\s*\d{2}:\d{2}\s*\|?/', '', $day['remarks']);
+                        $day['remarks'] = trim($day['remarks'], ' |');
+                    }
                 } elseif (strpos($day['remarks'] ?? '', 'Halfday') !== false) {
                     $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                 }
@@ -2096,7 +2156,7 @@ class DtrController extends Controller
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
-                $utMins = $totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0;
+                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                 $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
@@ -2117,7 +2177,14 @@ class DtrController extends Controller
             ->where('status', 'pending')
             ->count();
 
-        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings', 'isShared', 'pendingCount'));
+        $cutOff = $request->input('cut_off', 'all');
+        if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
+        $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
+        $cutOffStartDay = $cutOffRange['start_day'];
+        $cutOffEndDay = $cutOffRange['end_day'];
+        $cutOffLabel = $cutOffRange['label'];
+
+        return view('dtr.print-all', compact('allDtrs', 'month', 'year', 'monthName', 'daysInMonth', 'settings', 'isShared', 'pendingCount', 'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'));
     }
 
     public function toggleShare(Request $request)
@@ -2533,6 +2600,32 @@ class DtrController extends Controller
         );
 
         return response()->json(['success' => true]);
+    }
+
+    private function getCutOffRange($cutOff, $month, $year)
+    {
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+        if ($cutOff === '1') {
+            return [
+                'start_day' => 1,
+                'end_day' => min(15, $daysInMonth),
+                'label' => $monthName . ' 1-' . min(15, $daysInMonth),
+            ];
+        } elseif ($cutOff === '2') {
+            return [
+                'start_day' => 16,
+                'end_day' => $daysInMonth,
+                'label' => $monthName . ' 16-' . $daysInMonth,
+            ];
+        }
+
+        return [
+            'start_day' => 1,
+            'end_day' => $daysInMonth,
+            'label' => $monthName,
+        ];
     }
 
     private function applyGlobalHolidays($dtrData, $year, $month, $empDefaultWW)
