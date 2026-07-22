@@ -564,7 +564,8 @@ class DtrController extends Controller
                             $parts = explode(':', $day['total_hours']);
                             $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                         }
-                        $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
+                        $isOfficialLs = strpos($day['remarks'] ?? '', 'LS:') !== false && strpos($day['remarks'] ?? '', '(Official)') !== false;
+                        $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || $isOfficialLs) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                         $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                         $parts = [];
                         if ($remarks !== '') $parts[] = $remarks;
@@ -1092,7 +1093,8 @@ class DtrController extends Controller
                 $parts = explode(':', $day['total_hours']);
                 $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
             }
-            $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
+            $isOfficialLs = strpos($day['remarks'] ?? '', 'LS:') !== false && strpos($day['remarks'] ?? '', '(Official)') !== false;
+            $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || $isOfficialLs) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
             $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
             $parts = [];
             if ($remarks !== '') $parts[] = $remarks;
@@ -1498,7 +1500,8 @@ class DtrController extends Controller
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
-                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
+                $isOfficialLs = strpos($day['remarks'] ?? '', 'LS:') !== false && strpos($day['remarks'] ?? '', '(Official)') !== false;
+                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || $isOfficialLs) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                 $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
@@ -2156,7 +2159,8 @@ class DtrController extends Controller
                     $parts = explode(':', $day['total_hours']);
                     $totalMins = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
                 }
-                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension'])) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
+                $isOfficialLs = strpos($day['remarks'] ?? '', 'LS:') !== false && strpos($day['remarks'] ?? '', '(Official)') !== false;
+                $utMins = (!empty($day['so_number']) || !empty($day['to_number']) || !empty($day['ob_number']) || !empty($day['is_holiday']) || !empty($day['is_work_suspension']) || $isOfficialLs) ? 0 : ($totalMins > 0 ? max(0, $expectedMins - $totalMins) : 0);
                 $remarks = trim(preg_replace('/(?:^|\s*\|\s*)UT:\s*\d+:\d+/', '', $day['remarks'] ?? ''), ' |');
                 $parts = [];
                 if ($remarks !== '') $parts[] = $remarks;
