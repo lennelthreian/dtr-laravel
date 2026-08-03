@@ -116,6 +116,7 @@ class DtrController extends Controller
         $totalUndertime = null;
         $employee = null;
         $approvedRequests = collect();
+        $pendingRequests = collect();
         $cutOff = 'all';
         $cutOffStartDay = 1;
         $cutOffEndDay = 31;
@@ -605,6 +606,13 @@ class DtrController extends Controller
                     }
 
                     $approvedRequests = $approvedEdits->sortBy('target_date');
+
+                    $pendingRequests = DtrEditRequest::with('employee')
+                        ->forEmployee($bioId)
+                        ->forPeriod($year, $month)
+                        ->pending()
+                        ->orderBy('target_date')
+                        ->get();
                 }
             }
         }
@@ -615,7 +623,7 @@ class DtrController extends Controller
             'employees', 'dtrData', 'month', 'year', 'monthName',
             'daysInMonth', 'presentDays', 'totalMinutes', 'totalLate',
             'totalUndertime', 'employee', 'settings', 'isOwnDtr', 'isSupervisor',
-            'approvedRequests', 'canViewAll', 'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'
+            'approvedRequests', 'pendingRequests', 'canViewAll', 'cutOff', 'cutOffStartDay', 'cutOffEndDay', 'cutOffLabel'
         ));
     }
 
@@ -664,6 +672,13 @@ class DtrController extends Controller
         ]);
         $month = (int) $request->month;
         $year = (int) $request->year;
+
+        $cutOff = $request->input('cut_off', 'all');
+        if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
+        $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
+        $cutOffStartDay = $cutOffRange['start_day'];
+        $cutOffEndDay = $cutOffRange['end_day'];
+        $cutOffLabel = $cutOffRange['label'];
 
         $employee = DtrUser::where('emp_code', $bioId)
             ->where('is_active', true)
@@ -1166,13 +1181,6 @@ class DtrController extends Controller
         $pendingRequests = $allEmpRequests->where('status', 'pending')->sortByDesc('created_at');
         $approvedRequests = $allEmpRequests->where('status', 'approved')->sortBy('target_date');
         $rejectedRequests = $allEmpRequests->where('status', 'rejected')->sortByDesc('created_at');
-
-        $cutOff = $request->input('cut_off', 'all');
-        if (!in_array($cutOff, ['all', '1', '2'])) $cutOff = 'all';
-        $cutOffRange = $this->getCutOffRange($cutOff, $month, $year);
-        $cutOffStartDay = $cutOffRange['start_day'];
-        $cutOffEndDay = $cutOffRange['end_day'];
-        $cutOffLabel = $cutOffRange['label'];
 
         return view('dtr.show', compact(
             'employee', 'settings', 'dtrData', 'month', 'year',

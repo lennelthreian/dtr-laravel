@@ -13,7 +13,7 @@
     </tr>
     <tr>
         <td colspan="2" class="dtr-header-right" style="text-align:left;">
-            <h2 style="font-size:14px; margin:4px 0 0; text-align:center; font-weight:400;">For the period of <u>{{ $cutOffLabel }} {{ $year }}</u></h2>
+            <h2 style="font-size:14px; margin:4px 0 0; text-align:center; font-weight:400;">For the Period of <u>{{ $monthName }} {{ $year }}</u></h2>
         </td>
     </tr>
 </table>

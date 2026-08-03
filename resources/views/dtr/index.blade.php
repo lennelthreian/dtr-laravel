@@ -186,6 +186,74 @@
                             </div>
                         </div>
 
+                        @if ($pendingRequests->isNotEmpty())
+                            <div class="no-print" style="max-width:1000px; margin-bottom:15px;">
+                                <div class="card" style="padding:15px 20px;">
+                                    <h3 style="font-size:14px; margin-bottom:10px; color:var(--accent); border:none; margin:0 0 10px; padding:0;">Pending Edit Requests ({{ $pendingRequests->count() }})</h3>
+                                    <div class="table-wrap">
+                                        <table style="font-size:12px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Type</th>
+                                                    <th>Details</th>
+                                                    <th>Reason</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($pendingRequests as $req)
+                                                    @php
+                                                        $typeLabels = [
+                                                            'time_correction' => 'Time Correction',
+                                                            'absent' => 'Whole Day Absent',
+                                                            'halfday_am' => 'Halfday (AM)',
+                                                            'halfday_pm' => 'Halfday (PM)',
+                                                            'holiday' => 'Holiday',
+                                                            'on_leave' => 'On Leave',
+                                                            'wfh' => 'WFH',
+                                                            'special_order' => 'Special Order',
+                                                            'travel_order' => 'Travel Order',
+                                                            'official_business' => 'Official Business',
+                                                            'work_suspension' => 'Work Suspension',
+                                                            'locator_slip' => 'Locator Slip',
+                                                            'delete_request' => 'Deletion Request',
+                                                        ];
+                                                        $details = '';
+                                                        if ($req->type === 'time_correction') {
+                                                            $details = $req->field . ': ' . ($req->old_value ?: '&mdash;') . ' &rarr; ' . $req->new_value;
+                                                        } elseif (in_array($req->type, ['halfday_am', 'halfday_pm']) && $req->new_value) {
+                                                            $label = $req->type === 'halfday_am' ? 'AM out' : 'PM in';
+                                                            $details = $label . ': ' . $req->new_value;
+                                                        } elseif ($req->type === 'on_leave' && $req->new_value) {
+                                                            $details = 'On Leave (' . $req->new_value . ' hrs)';
+                                                        } elseif ($req->type === 'locator_slip') {
+                                                            $lsLabel = $req->field === 'personal' ? 'Personal' : 'Official';
+                                                            $timeLeft = $req->ls_time_left ? date('h:i A', strtotime($req->ls_time_left)) : '';
+                                                            $timeReturned = $req->ls_no_return ? 'No Return' : ($req->ls_time_returned ? date('h:i A', strtotime($req->ls_time_returned)) : '');
+                                                            $parts = array_filter([$req->new_value, $timeLeft ? "Left: $timeLeft" : null, $timeReturned ? "Ret: $timeReturned" : null]);
+                                                            $details = $typeLabels[$req->type] . ' (' . $lsLabel . ')' . ($parts ? ' &mdash; ' . implode(' | ', $parts) : '');
+                                                        } elseif (in_array($req->type, ['work_suspension', 'wfh', 'special_order', 'travel_order', 'official_business']) && $req->new_value && $req->new_value !== 'whole_day') {
+                                                            $details = $typeLabels[$req->type] ?? $req->type;
+                                                            if ($req->new_value === 'am') $details .= ' (AM)';
+                                                            elseif ($req->new_value === 'pm') $details .= ' (PM)';
+                                                        } else {
+                                                            $details = $typeLabels[$req->type] ?? $req->type;
+                                                        }
+                                                    @endphp
+                                                    <tr>
+                                                        <td>{{ $req->target_date->format('M d, Y') }}</td>
+                                                        <td><strong>{{ $typeLabels[$req->type] ?? $req->type }}</strong></td>
+                                                        <td>{!! $details !!}</td>
+                                                        <td style="max-width:200px;">{{ $req->reason }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         @if ($approvedRequests->isNotEmpty())
                             <div class="no-print" style="max-width:1000px; margin-bottom:15px;">
                                 <div class="card" style="padding:15px 20px;">
