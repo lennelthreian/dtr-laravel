@@ -9,7 +9,7 @@ class GlobalHoliday extends Model
 {
     use LogsUserActivity;
     protected $fillable = [
-        'target_date', 'type', 'value', 'description',
+        'target_date', 'type', 'value', 'start_time', 'end_time', 'description',
     ];
 
     protected $casts = [

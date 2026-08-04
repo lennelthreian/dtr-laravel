@@ -247,6 +247,8 @@ CREATE TABLE `global_holidays` (
   `target_date` date NOT NULL,
   `type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `value` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'whole_day',
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
   `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -262,7 +264,7 @@ CREATE TABLE `global_holidays` (
 
 LOCK TABLES `global_holidays` WRITE;
 /*!40000 ALTER TABLE `global_holidays` DISABLE KEYS */;
-INSERT INTO `global_holidays` VALUES (1,'2026-05-27','holiday','whole_day','Eid\'l Fit\'r','2026-05-13 23:37:33','2026-05-13 23:37:33'),(3,'2026-03-06','work_suspension','whole_day','MAY BAGYO','2026-05-13 23:42:35','2026-05-13 23:42:35'),(5,'2026-05-01','holiday','whole_day','Labor Day','2026-05-17 19:18:53','2026-05-17 19:18:53'),(7,'2026-06-12','holiday','whole_day','Independence Day','2026-06-07 22:16:36','2026-06-07 22:16:36');
+INSERT INTO `global_holidays` VALUES (1,'2026-05-27','holiday','whole_day',NULL,NULL,'Eid\'l Fit\'r','2026-05-13 23:37:33','2026-05-13 23:37:33'),(3,'2026-03-06','work_suspension','whole_day',NULL,NULL,'MAY BAGYO','2026-05-13 23:42:35','2026-05-13 23:42:35'),(5,'2026-05-01','holiday','whole_day',NULL,NULL,'Labor Day','2026-05-17 19:18:53','2026-05-17 19:18:53'),(7,'2026-06-12','holiday','whole_day',NULL,NULL,'Independence Day','2026-06-07 22:16:36','2026-06-07 22:16:36');
 /*!40000 ALTER TABLE `global_holidays` ENABLE KEYS */;
 UNLOCK TABLES;
 

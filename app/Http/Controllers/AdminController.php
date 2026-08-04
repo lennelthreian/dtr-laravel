@@ -295,9 +295,21 @@ class AdminController extends Controller
         $data = $request->validate([
             'target_date' => 'required|date|unique:global_holidays,target_date',
             'type' => 'required|in:holiday,work_suspension',
-            'value' => 'required|in:whole_day,am,pm',
+            'value' => 'required|in:whole_day,am,pm,specific_time',
             'description' => 'nullable|string|max:200',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
         ]);
+
+        if ($data['value'] === 'specific_time') {
+            $request->validate([
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+            ]);
+        }
+
+        $data['start_time'] = $data['start_time'] ?: null;
+        $data['end_time'] = $data['end_time'] ?: null;
 
         GlobalHoliday::create($data);
         $m = (int)date('m', strtotime($data['target_date']));

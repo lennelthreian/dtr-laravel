@@ -90,18 +90,31 @@
                                 </div>
                                 <div>
                                     <label style="font-size:13px;font-weight:600;color:var(--gray-700);">Type</label>
-                                    <select name="type" required class="form-control">
+                                    <select name="type" id="typeSelect" required class="form-control">
                                         <option value="holiday" {{ old('type') === 'holiday' ? 'selected' : '' }}>Holiday</option>
                                         <option value="work_suspension" {{ old('type') === 'work_suspension' ? 'selected' : '' }}>Work Suspension</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label style="font-size:13px;font-weight:600;color:var(--gray-700);">Coverage</label>
-                                    <select name="value" required class="form-control">
+                                    <select name="value" id="coverageSelect" required class="form-control">
                                         <option value="whole_day" {{ old('value') === 'whole_day' ? 'selected' : '' }}>Whole Day</option>
-                                        <option value="am" {{ old('value') === 'am' ? 'selected' : '' }}>AM Only</option>
-                                        <option value="pm" {{ old('value') === 'pm' ? 'selected' : '' }}>PM Only</option>
+                                        <option value="am" {{ old('value') === 'am' ? 'selected' : '' }}>AM Halfday</option>
+                                        <option value="pm" {{ old('value') === 'pm' ? 'selected' : '' }}>PM Halfday</option>
+                                        <option value="specific_time" id="specificTimeOption" {{ old('value') === 'specific_time' ? 'selected' : '' }}>Select Specific Time</option>
                                     </select>
+                                </div>
+                                <div id="specificTimeFields" style="display:none;flex-direction:column;gap:12px;">
+                                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                        <div style="flex:1;min-width:130px;">
+                                            <label style="font-size:13px;font-weight:600;color:var(--gray-700);">Start Time</label>
+                                            <input type="time" name="start_time" class="form-control" value="{{ old('start_time') }}">
+                                        </div>
+                                        <div style="flex:1;min-width:130px;">
+                                            <label style="font-size:13px;font-weight:600;color:var(--gray-700);">End Time</label>
+                                            <input type="time" name="end_time" class="form-control" value="{{ old('end_time') }}">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label style="font-size:13px;font-weight:600;color:var(--gray-700);">Description (optional)</label>
@@ -139,7 +152,11 @@
                                                 {{ $h->type === 'holiday' ? 'Holiday' : 'Work Suspension' }}
                                             </span>
                                             <span style="color:var(--gray-500);margin-left:4px;">
-                                                ({{ $h->value === 'whole_day' ? 'Whole Day' : strtoupper($h->value) }})
+                                                @if ($h->value === 'specific_time')
+                                                    ({{ date('g:i A', strtotime($h->start_time)) }} - {{ date('g:i A', strtotime($h->end_time)) }})
+                                                @else
+                                                    ({{ $h->value === 'whole_day' ? 'Whole Day' : strtoupper($h->value) }})
+                                                @endif
                                             </span>
                                             @if ($h->description)
                                                 <span style="color:var(--gray-600);margin-left:8px;">&mdash; {{ $h->description }}</span>
@@ -182,14 +199,18 @@
                                                 @if ($day['holiday']->type === 'holiday')
                                                     <div class="holiday-badge">
                                                         Holiday
-                                                        @if ($day['holiday']->value !== 'whole_day')
+                                                        @if ($day['holiday']->value === 'specific_time')
+                                                            ({{ date('g:i A', strtotime($day['holiday']->start_time)) }} - {{ date('g:i A', strtotime($day['holiday']->end_time)) }})
+                                                        @elseif ($day['holiday']->value !== 'whole_day')
                                                             ({{ strtoupper($day['holiday']->value) }})
                                                         @endif
                                                     </div>
                                                 @else
                                                     <div class="ws-badge">
                                                         Suspension
-                                                        @if ($day['holiday']->value !== 'whole_day')
+                                                        @if ($day['holiday']->value === 'specific_time')
+                                                            ({{ date('g:i A', strtotime($day['holiday']->start_time)) }} - {{ date('g:i A', strtotime($day['holiday']->end_time)) }})
+                                                        @elseif ($day['holiday']->value !== 'whole_day')
                                                             ({{ strtoupper($day['holiday']->value) }})
                                                         @endif
                                                     </div>
@@ -225,6 +246,36 @@
         (function() {
             var btn = document.getElementById('themeToggle');
             if (btn && localStorage.getItem('theme') === 'dark') btn.textContent = 'Light Mode';
+
+            var typeSelect = document.getElementById('typeSelect');
+            var coverageSelect = document.getElementById('coverageSelect');
+            var specificOption = document.getElementById('specificTimeOption');
+            var specificFields = document.getElementById('specificTimeFields');
+
+            function syncType() {
+                var isWs = typeSelect && typeSelect.value === 'work_suspension';
+                if (specificOption) {
+                    specificOption.style.display = isWs ? '' : 'none';
+                    if (!isWs && coverageSelect && coverageSelect.value === 'specific_time') {
+                        coverageSelect.value = 'whole_day';
+                    }
+                }
+                syncCoverage();
+            }
+
+            function syncCoverage() {
+                if (!coverageSelect || !specificFields) return;
+                var isSpecific = coverageSelect.value === 'specific_time';
+                if (isSpecific) {
+                    specificFields.style.display = 'flex';
+                } else {
+                    specificFields.style.display = 'none';
+                }
+            }
+
+            if (typeSelect) typeSelect.addEventListener('change', syncType);
+            if (coverageSelect) coverageSelect.addEventListener('change', syncCoverage);
+            syncType();
         })();
     </script>
 </body>
