@@ -10,11 +10,11 @@ class RenameEmpCodeToBioId extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->renameColumn('emp_code', 'bio_id');
+            if (Schema::hasColumn("users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); } if (Schema::hasColumn("dtr_users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); }
         });
 
         Schema::table('dtr_users', function (Blueprint $table) {
-            $table->renameColumn('emp_code', 'bio_id');
+            if (Schema::hasColumn("users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); } if (Schema::hasColumn("dtr_users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); }
         });
 
         try {
@@ -30,11 +30,11 @@ class RenameEmpCodeToBioId extends Migration
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->renameColumn('bio_id', 'emp_code');
+            if (Schema::hasColumn("users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); } if (Schema::hasColumn("dtr_users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); }
         });
 
         Schema::table('dtr_users', function (Blueprint $table) {
-            $table->renameColumn('bio_id', 'emp_code');
+            if (Schema::hasColumn("users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); } if (Schema::hasColumn("dtr_users", "emp_code")) { $table->renameColumn("emp_code", "bio_id"); }
         });
 
         try {

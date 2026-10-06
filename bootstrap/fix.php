@@ -1,0 +1,8 @@
+<?php
+putenv("DB_HOST=192.168.1.151");
+putenv("ZK_DB_HOST=192.168.1.151");
+$_ENV["DB_HOST"] = "192.168.1.151";
+$_ENV["ZK_DB_HOST"] = "192.168.1.151";
+$_SERVER["DB_HOST"] = "192.168.1.151";
+$_SERVER["ZK_DB_HOST"] = "192.168.1.151";
+

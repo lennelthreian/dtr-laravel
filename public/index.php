@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__.'/../bootstrap/fix.php';
+
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 

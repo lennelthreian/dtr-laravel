@@ -1,4 +1,15 @@
 <div style="font-family:Arial, sans-serif; font-style:italic; font-size:11px; margin-bottom:6px; text-align:left;">Civil Service Form No. 48</div>
+@php
+    $employee = $employee ?? null;
+    $monthName = $monthName ?? '';
+    $year = $year ?? null;
+    $month = $month ?? null;
+    $settings = $settings ?? [];
+    $cutOffStartDay = $cutOffStartDay ?? 1;
+    $cutOffEndDay = $cutOffEndDay ?? ($month ? cal_days_in_month(CAL_GREGORIAN, $month, $year ?? date('Y')) : 31);
+    $dtrData = $dtrData ?? [];
+@endphp
+
 <table class="dtr-header-table">
     <tr>
         <td colspan="2" style="text-align:center;">
@@ -7,7 +18,7 @@
     </tr>
     <tr>
         <td colspan="2" style="text-align:center; padding:4px 0;">
-            <h1 style="font-size:17px; margin:0; text-decoration:underline; font-weight:700;">{{ $employee->full_name }}</h1>
+            <h1 style="font-size:17px; margin:0; text-decoration:underline; font-weight:700;">{{ $employee ? $employee->full_name : '' }}</h1>
             <div style="font-size:10px; margin-top:2px; color:var(--gray-600);">(Name)</div>
         </td>
     </tr>
@@ -19,14 +30,16 @@
 </table>
 
 @php
-    $empMaxDow = $employee->default_work_week === '4-day' ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5));
+    $empMaxDow = $employee && $employee->default_work_week === '4-day' ? 4 : (($settings['four_day_work_week'] ?? '0') === '1' ? 4 : ($settings['max_dow'] ?? 5));
     $totalWeekdays = 0; $presentWeekdays = 0; $totalSaturdays = 0; $presentSaturdays = 0;
-    for ($d = $cutOffStartDay; $d <= $cutOffEndDay; $d++) {
-        $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
-        $dayMaxDow = (isset($dtrData[$d]['work_week_type']) ? ($dtrData[$d]['work_week_type'] === '4-day' ? 4 : 5) : $empMaxDow);
-        $isExcluded = isset($dtrData[$d]) && (!empty($dtrData[$d]['is_holiday']) || !empty($dtrData[$d]['is_work_suspension']));
-        if ($dow <= $dayMaxDow && !$isExcluded) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentWeekdays++; }
-        if ($dow == 6 && !$isExcluded) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentSaturdays++; }
+    if ($year && $month && $cutOffStartDay && $cutOffEndDay) {
+        for ($d = $cutOffStartDay; $d <= $cutOffEndDay; $d++) {
+            $dow = date('N', strtotime(sprintf('%04d-%02d-%02d', $year, $month, $d)));
+            $dayMaxDow = (isset($dtrData[$d]['work_week_type']) ? ($dtrData[$d]['work_week_type'] === '4-day' ? 4 : 5) : $empMaxDow);
+            $isExcluded = isset($dtrData[$d]) && (!empty($dtrData[$d]['is_holiday']) || !empty($dtrData[$d]['is_work_suspension']));
+            if ($dow <= $dayMaxDow && !$isExcluded) { $totalWeekdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentWeekdays++; }
+            if ($dow == 6 && !$isExcluded) { $totalSaturdays++; if (isset($dtrData[$d]) && $dtrData[$d]['has_punch'] && !$isExcluded) $presentSaturdays++; }
+        }
     }
 @endphp
 <div style="display:flex; justify-content:space-between; font-size:11px; margin:6px 0; font-style:italic;">

@@ -187,6 +187,7 @@ class DtrController extends Controller
                     foreach ($approvedEdits as $edit) {
                         $dayNum = (int) $edit->target_date->format('j');
                         $r = $dtrData[$dayNum]['remarks'] ?? '';
+                        $dtrData = $this->releaseGlobalHolidayForEdit($dtrData, $edit);
                         if (!isset($dtrData[$dayNum])) {
                             $dtrData[$dayNum] = [
                                 'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
@@ -457,7 +458,7 @@ class DtrController extends Controller
                     }
 
                     foreach ($dtrData as $dayNum => &$day) {
-                        $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                        $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                         if (!$isHalfday) continue;
                         if (strpos($day['remarks'] ?? '', 'Halfday') === 0) continue;
                         $isAm = strpos($day['remarks'] ?? '', '(AM)') !== false;
@@ -530,7 +531,7 @@ class DtrController extends Controller
                     } elseif (!empty($day['is_suspension'])) {
                         // Work suspension: total_hours already set by applyGlobalHolidays
                     } else {
-                        $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                        $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                         if ($isHalfday) {
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                         } else {
@@ -723,6 +724,7 @@ class DtrController extends Controller
         foreach ($approvedEdits as $edit) {
             $dayNum = (int) $edit->target_date->format('j');
             $r = $dtrData[$dayNum]['remarks'] ?? '';
+            $dtrData = $this->releaseGlobalHolidayForEdit($dtrData, $edit);
             if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
@@ -976,7 +978,7 @@ class DtrController extends Controller
         }
 
         foreach ($dtrData as $dayNum => &$day) {
-            $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+            $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
             if (!$isHalfday) continue;
             if (strpos($day['remarks'] ?? '', 'Halfday') === 0) continue;
             $isAm = strpos($day['remarks'] ?? '', '(AM)') !== false;
@@ -1075,7 +1077,7 @@ class DtrController extends Controller
                 } elseif (!empty($day['is_suspension'])) {
                     // Work suspension: total_hours already set by applyGlobalHolidays
                 } else {
-                    $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                    $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                     if ($isHalfday) {
                         $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                     } else {
@@ -1237,6 +1239,7 @@ class DtrController extends Controller
             foreach ($approvedEdits as $edit) {
                 $dayNum = (int) $edit->target_date->format('j');
                 $r = $dtrData[$dayNum]['remarks'] ?? '';
+                $dtrData = $this->releaseGlobalHolidayForEdit($dtrData, $edit);
                 if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
@@ -1418,7 +1421,7 @@ class DtrController extends Controller
             }
 
             foreach ($dtrData as $dayNum => &$day) {
-                $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                 if (!$isHalfday) continue;
                 if (strpos($day['remarks'] ?? '', 'Halfday') === 0) continue;
                 $isAm = strpos($day['remarks'] ?? '', '(AM)') !== false;
@@ -1478,7 +1481,7 @@ class DtrController extends Controller
                     } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                         // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                     } else {
-                        $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                        $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                         if ($isHalfday) {
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                         } else {
@@ -1628,6 +1631,7 @@ class DtrController extends Controller
             foreach ($approvedEdits as $edit) {
                 $dayNum = (int) $edit->target_date->format('j');
                 $r = $dtrData[$dayNum]['remarks'] ?? '';
+                $dtrData = $this->releaseGlobalHolidayForEdit($dtrData, $edit);
                 if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
@@ -1863,6 +1867,7 @@ class DtrController extends Controller
             foreach ($approvedEdits as $edit) {
                 $dayNum = (int) $edit->target_date->format('j');
                 $r = $dtrData[$dayNum]['remarks'] ?? '';
+                $dtrData = $this->releaseGlobalHolidayForEdit($dtrData, $edit);
                 if (!isset($dtrData[$dayNum])) {
                     $dtrData[$dayNum] = [
                         'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
@@ -2070,7 +2075,7 @@ class DtrController extends Controller
             }
 
             foreach ($dtrData as $dayNum => &$day) {
-                $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                 if (!$isHalfday) continue;
                 if (strpos($day['remarks'] ?? '', 'Halfday') === 0) continue;
                 $isAm = strpos($day['remarks'] ?? '', '(AM)') !== false;
@@ -2137,7 +2142,7 @@ class DtrController extends Controller
                     } elseif (isset($day['remarks']) && strpos($day['remarks'], 'On Leave') !== false) {
                         // On Leave: total_hours handled by recomputeHalfdayHours or set in switch
                     } else {
-                        $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+                        $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
                         if ($isHalfday) {
                             $day['total_hours'] = $day['work_week_type'] === '4-day' ? '05:00' : '04:00';
                         } else {
@@ -2408,6 +2413,11 @@ class DtrController extends Controller
 
         $remarks = [];
 
+        $holidayNote = trim($day['holiday_note'] ?? '');
+        if ($holidayNote !== '') {
+            $remarks[] = $holidayNote;
+        }
+
         $lateAM = 0;
         if ($amIn !== '' && preg_match('/^\d/', $amIn)) {
             $amStartTS = strtotime($settingsAmStart);
@@ -2667,52 +2677,99 @@ class DtrController extends Controller
             }
 
             $desc = $holiday->description ? ' (' . $holiday->description . ')' : '';
+            $isHoliday = $holiday->type === 'holiday';
+            $label = $isHoliday ? 'Holiday' : 'Work Suspension';
 
-            if ($holiday->type === 'holiday') {
-                if ($holiday->value === 'am') {
-                    $dtrData[$dayNum]['am_in'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['am_out'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['remarks'] = 'Holiday (AM)' . $desc;
-                } elseif ($holiday->value === 'pm') {
-                    $dtrData[$dayNum]['pm_in'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['pm_out'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['remarks'] = 'Holiday (PM)' . $desc;
-                } else {
-                    $dtrData[$dayNum]['am_in'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['am_out'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['pm_in'] = 'HOLIDAY';
-                    $dtrData[$dayNum]['pm_out'] = 'HOLIDAY';
+            if ($holiday->value === 'am') {
+                $scope = 'am';
+                $note = $label . ' (AM)' . $desc;
+            } elseif ($holiday->value === 'pm') {
+                $scope = 'pm';
+                $note = $label . ' (PM)' . $desc;
+            } elseif ($holiday->value === 'specific_time' && !$isHoliday) {
+                $scope = 'none';
+                $timeRange = '';
+                if ($holiday->start_time && $holiday->end_time) {
+                    $timeRange = ' (' . date('g:i A', strtotime($holiday->start_time)) . ' - ' . date('g:i A', strtotime($holiday->end_time)) . ')';
+                }
+                $note = $label . $timeRange . $desc;
+            } else {
+                $scope = 'whole_day';
+                $note = $label . $desc;
+            }
+
+            $amPunched = ($dtrData[$dayNum]['am_in'] ?? '') !== '' || ($dtrData[$dayNum]['am_out'] ?? '') !== '';
+            $pmPunched = ($dtrData[$dayNum]['pm_in'] ?? '') !== '' || ($dtrData[$dayNum]['pm_out'] ?? '') !== '';
+            $dayPunched = $amPunched || $pmPunched;
+
+            if ($scope === 'am') {
+                $overriddenByPunch = $amPunched;
+            } elseif ($scope === 'pm') {
+                $overriddenByPunch = $pmPunched;
+            } else {
+                $overriddenByPunch = $dayPunched;
+            }
+
+            $existingRemarks = $dtrData[$dayNum]['remarks'] ?? '';
+            $dtrData[$dayNum]['holiday_note'] = $note;
+            $dtrData[$dayNum]['remarks'] = $existingRemarks !== '' ? $note . ' | ' . $existingRemarks : $note;
+
+            if ($overriddenByPunch) {
+                // Biometric punches take precedence over the scheduled holiday/work suspension.
+                // Punch times stay as-is; the holiday/suspension is kept in remarks only.
+                $dtrData[$dayNum]['punch_override'] = true;
+                continue;
+            }
+
+            $placeholder = $isHoliday ? 'HOLIDAY' : 'WORK SUSPENSION';
+
+            if ($scope === 'am') {
+                $dtrData[$dayNum]['am_in'] = $placeholder;
+                $dtrData[$dayNum]['am_out'] = $placeholder;
+            } elseif ($scope === 'pm') {
+                $dtrData[$dayNum]['pm_in'] = $placeholder;
+                $dtrData[$dayNum]['pm_out'] = $placeholder;
+            } elseif ($scope === 'whole_day') {
+                $dtrData[$dayNum]['am_in'] = $placeholder;
+                $dtrData[$dayNum]['am_out'] = $placeholder;
+                $dtrData[$dayNum]['pm_in'] = $placeholder;
+                $dtrData[$dayNum]['pm_out'] = $placeholder;
+                if ($isHoliday) {
                     $dtrData[$dayNum]['is_holiday'] = true;
-                    $dtrData[$dayNum]['remarks'] = 'Holiday' . $desc;
-                }
-                $dtrData[$dayNum]['has_punch'] = true;
-            } elseif ($holiday->type === 'work_suspension') {
-                if ($holiday->value === 'am') {
-                    $dtrData[$dayNum]['am_in'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['am_out'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['remarks'] = 'Work Suspension (AM)' . $desc;
-                } elseif ($holiday->value === 'pm') {
-                    $dtrData[$dayNum]['pm_in'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['pm_out'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['remarks'] = 'Work Suspension (PM)' . $desc;
-                } elseif ($holiday->value === 'specific_time') {
-                    $timeRange = '';
-                    if ($holiday->start_time && $holiday->end_time) {
-                        $timeRange = ' (' . date('g:i A', strtotime($holiday->start_time)) . ' - ' . date('g:i A', strtotime($holiday->end_time)) . ')';
-                    }
-                    $dtrData[$dayNum]['remarks'] = 'Work Suspension' . $timeRange . $desc;
                 } else {
-                    $dtrData[$dayNum]['am_in'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['am_out'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['pm_in'] = 'WORK SUSPENSION';
-                    $dtrData[$dayNum]['pm_out'] = 'WORK SUSPENSION';
                     $dtrData[$dayNum]['total_hours'] = '';
-                    $dtrData[$dayNum]['remarks'] = 'Work Suspension' . $desc;
                 }
+            }
+
+            if (!$isHoliday) {
                 $dtrData[$dayNum]['is_suspension'] = true;
-                $dtrData[$dayNum]['has_punch'] = true;
+            }
+
+            $dtrData[$dayNum]['has_punch'] = true;
+        }
+
+        return $dtrData;
+    }
+
+    private function releaseGlobalHolidayForEdit($dtrData, $edit)
+    {
+        if (in_array($edit->type, ['holiday', 'work_suspension'])) {
+            return $dtrData;
+        }
+
+        $dayNum = (int) $edit->target_date->format('j');
+        if (!isset($dtrData[$dayNum]) || empty($dtrData[$dayNum]['holiday_note'])) {
+            return $dtrData;
+        }
+
+        foreach (['am_in', 'am_out', 'pm_in', 'pm_out'] as $field) {
+            $value = $dtrData[$dayNum][$field] ?? '';
+            if ($value === 'HOLIDAY' || $value === 'WORK SUSPENSION') {
+                $dtrData[$dayNum][$field] = '';
             }
         }
+
+        unset($dtrData[$dayNum]['is_holiday'], $dtrData[$dayNum]['is_suspension'], $dtrData[$dayNum]['is_work_suspension']);
 
         return $dtrData;
     }
@@ -2763,7 +2820,7 @@ class DtrController extends Controller
     {
         $empDefaultWW = $employee->default_work_week ?? (($settings['four_day_work_week'] ?? '0') === '1' ? '4-day' : '5-day');
         foreach ($dtrData as $dayNum => &$day) {
-            $isHalfday = strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false;
+            $isHalfday = empty($day['punch_override']) && (strpos($day['remarks'] ?? '', '(AM)') !== false || strpos($day['remarks'] ?? '', '(PM)') !== false);
             if (!$isHalfday) continue;
 
             if (strpos($day['remarks'] ?? '', 'Halfday') !== 0) {
